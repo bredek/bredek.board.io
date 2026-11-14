@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="icon" href="icon.png" type="image/png" sizes="512x512"><link rel="apple-touch-icon" href="icon.png"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bredek Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: toolbar, wide breadboard canvas (scrolls sideways on phone), readout cards in a row below */
+:root{--bg:#f3f5f4;--panel:#ffffff;--fg:#1b2420;--mut:#5d6b65;--line:#cfd8d4;--acc:#0f7a5a;--warn:#c0392b;--hot:#e67e22;
+--board:#f4f1e8;--hole:#3a3a36;--plus:#d63a2f;--minus:#2f5fd6;
+--fd:"Space Grotesk",system-ui,sans-serif;--fb:Inter,system-ui,sans-serif;--fm:"JetBrains Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111614;--panel:#19201d;--fg:#e3ebe7;--mut:#91a19a;--line:#2c3632;--acc:#3fcf9c;--warn:#ff6b5b;--hot:#ffa94d;--board:#d9d4c6;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111614;--panel:#19201d;--fg:#e3ebe7;--mut:#91a19a;--line:#2c3632;--acc:#3fcf9c;--warn:#ff6b5b;--hot:#ffa94d;--board:#d9d4c6;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--fb);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+h1{font-family:var(--fd);font-size:20px;margin:0 0 8px;display:flex;align-items:center;flex-wrap:wrap;gap:4px 0}h1 img{height:44px;width:auto;display:block}
+.bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center;font-size:13px}
+.bar button,.bar select{font:13px var(--fb);padding:6px 10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:6px;cursor:pointer}
+.bar button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.bar button.tl{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:68px;padding:6px 4px 5px;font-size:11px;line-height:1.1}
+.bar button.tl svg{width:46px;height:34px;display:block}
+.bar button.tl.on{background:color-mix(in srgb,var(--acc) 16%,var(--panel));color:var(--fg);border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+#tools{gap:4px}
+.dd{position:relative;display:flex}
+.ddm[hidden],[hidden]{display:none!important}
+.ddm{position:absolute;top:100%;left:0;z-index:20;margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;gap:2px;min-width:250px}
+.bar .ddm button{display:flex;align-items:center;gap:10px;border:0;background:none;padding:6px 8px;border-radius:6px;text-align:left;color:var(--fg);font:13px var(--fb);cursor:pointer}
+.bar .ddm button:hover,.bar .ddm button:focus-visible{background:color-mix(in srgb,var(--acc) 14%,var(--panel))}
+.ddm svg{width:46px;height:34px;flex:none}.ddm span{display:flex;flex-direction:column;gap:2px}.ddh{font:600 10px var(--fb);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:8px 8px 2px}
+.ddm{max-height:70vh;overflow-y:auto}
+.ddm small{color:var(--mut);font-size:11px}
+#tools .sep{width:1px;align-self:stretch;background:var(--line);margin:4px 6px}
+.bar select{appearance:none;-webkit-appearance:none;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%237a8580' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:12px 8px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.wrap{overflow-x:auto}
+#sv{display:block;width:100%;min-width:900px;height:auto;touch-action:none;user-select:none}
+.flow{fill:none;stroke-linecap:round;animation:flow linear infinite}@keyframes flow{to{stroke-dashoffset:-0.9}}
+@media (prefers-reduced-motion:reduce){.flow{animation:none}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;min-width:0}
+.card h2{font:600 12px var(--fd);letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:0 0 6px}
+.dmm{font:600 26px var(--fm);font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-variant-numeric:tabular-nums}
+.kv b{font-family:var(--fm);font-weight:500}
+.warn{color:var(--warn);font-weight:600}.hot{color:var(--hot);font-weight:600}.mut{color:var(--mut)}
+.esp-t{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}.esp-t h2{margin:0}#esps{font-size:12px}
+.pins{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.pin{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--bg);min-width:0}
+.pin.over{border-color:var(--warn)}
+.pin-h{display:flex;align-items:center;gap:8px}.pin-n{font:600 17px var(--fd)}
+.chip{font:600 10px var(--fb);letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--mut)}
+.lvl{margin-left:auto;font:700 12px var(--fm);padding:3px 9px;border-radius:6px;letter-spacing:.04em}
+.lvl.h{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc)}.lvl.l{background:color-mix(in srgb,var(--mut) 20%,transparent);color:var(--fg)}.lvl.u{background:color-mix(in srgb,var(--hot) 22%,transparent);color:var(--hot)}
+.volt{display:flex;align-items:baseline;gap:5px;margin-bottom:6px}.volt b{font:600 26px var(--fm);font-variant-numeric:tabular-nums}.volt span{color:var(--mut);font-size:13px}.volt .cur{margin-left:auto;font:12px var(--fm)}
+.pin.over .cur{color:var(--warn);font-weight:600}
+.vbar{position:relative;height:6px;border-radius:3px;background:linear-gradient(to right,color-mix(in srgb,var(--mut) 30%,transparent) 0 25%,color-mix(in srgb,var(--hot) 28%,transparent) 25% 75%,color-mix(in srgb,var(--acc) 35%,transparent) 75% 100%)}
+.vbar i{position:absolute;top:-4px;width:4px;height:14px;border-radius:2px;background:var(--fg);transform:translateX(-50%)}
+.vbar-l{display:flex;justify-content:space-between;font:10px var(--fm);color:var(--mut);margin-top:3px}
+.rd{display:grid;grid-template-columns:1fr 1fr;gap:6px}.rd div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px}.rd small{display:block;color:var(--mut);font-size:11px}.rd b{font:600 19px var(--fm)}
+.note{font-size:12px;padding:6px 9px;border-radius:6px;background:color-mix(in srgb,var(--hot) 15%,transparent)}
+.con{font-size:12px;color:var(--mut)}
+.pm{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px;font-size:12px;color:var(--mut)}
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:10px}.sh svg{width:54px;height:42px;flex:none;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px;box-sizing:border-box}
+.sh-n{font:600 15px var(--fd);color:var(--fg)}.sh-l{font:12px var(--fm);color:var(--mut);margin-top:2px}
+.rd.t3{grid-template-columns:repeat(3,minmax(0,1fr))}.rd.t3 b{font-size:14px}.rd>div{min-width:0}.rd b{display:block;overflow-wrap:anywhere}
+.rd .hot b{color:var(--hot)}.rd .warn b{color:var(--warn)}.rd .hot,.rd .warn{font-weight:400}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut);margin-top:10px}
+.fi{display:flex;align-items:center;border:1px solid var(--line);border-radius:7px;background:var(--bg)}.fi:focus-within{border-color:var(--acc)}
+.fi input,.fi select{border:0!important;background:transparent!important;flex:1;min-width:0;width:auto!important;font:15px var(--fm)!important;padding:7px 9px!important;color:var(--fg);outline:none}
+.fi em{font:13px var(--fm);font-style:normal;color:var(--mut);padding:0 10px}
+.swt{display:flex;flex-wrap:wrap;gap:7px}.swt button{width:24px;height:24px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}.swt button.on{box-shadow:0 0 0 2px var(--acc)}
+.hint{font-size:12px;color:var(--mut);margin-top:10px;line-height:1.45}
+.fixb{margin-top:8px;font:13px var(--fb);padding:7px 10px;border-radius:7px;border:1px solid var(--warn);background:transparent;color:var(--warn);cursor:pointer}
+.esp{display:grid;grid-template-columns:auto minmax(0,290px) auto auto auto;justify-content:start;gap:4px 12px;align-items:center;font-variant-numeric:tabular-nums}.esp .num{font-family:var(--fm)}
+input[type=number],select.v{width:100%;font:13px var(--fm);padding:4px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:4px;box-sizing:border-box}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@600&family=JetBrains+Mono:wght@500;600&display=swap">
+
+<h1><img src="logo.svg" alt="Bredek Board" width="130" height="44"><span class="mut" style="font:400 13px var(--fb)">навчальний DC-симулятор</span></h1>
+<div class="bar" id="tools"></div>
+<div class="bar">
+ <select id="ex" aria-label="Приклади"><option value="">Приклади…</option></select>
+ <button id="clr">Очистити</button>
+ <label for="pwr"><input id="pwr" type="checkbox" checked> Живлення шин</label>
+ <select id="pv" aria-label="Напруга шин"><option value="5">5 В</option><option value="3.3">3,3 В</option></select>
+ <input id="lux" type="range" min="0" max="3" step="0.01" value="2" hidden><b id="luxv" hidden>99</b>
+</div>
+<div class="wrap"><svg id="sv" viewBox="-0.05 -0.05 65.6 22.75" xmlns="http://www.w3.org/2000/svg"><defs id="defs"></defs><g id="Lboard"></g><g id="Lhl"></g><g id="Lcomp"></g><g id="Lflow"></g><g id="Ltop"></g><g id="Ltip"></g></svg></div>
+<div class="cards">
+ <div class="card"><h2>Мультиметр (V між щупами)</h2><div class="dmm" id="dmm">— — —</div><div class="mut">Інструмент «Щупи»: клацни отвір для червоного щупа, потім для чорного.</div></div>
+ <div class="card"><h2>Вибраний елемент</h2><div id="sel" class="mut">Нічого не вибрано.</div></div>
+ <div class="card" id="espc" hidden style="grid-column:1/-1"><div class="esp-t"><h2 id="esph">Піни плати</h2><span id="esps" class="mut"></span></div><div id="espb"></div></div>
+ <div class="card"><h2>Попередження</h2><div id="warns" class="mut">Немає</div></div>
+ <div class="card mut"><h2>Як з'єднана макетка</h2><div id="hov">Наведи на отвір: підсвітяться всі отвори, з'єднані з ним. a–e одного стовпця з'єднані між собою, f–j теж, а через канавку посередині ні. Шини + і − тягнуться вздовж усієї плати. Верхні й нижні шини живить модуль живлення (як MB102 з обома перемичками). Деталь ставиш кліком (стандартна довжина) або перетягуванням від отвору до отвору, в один отвір лише одна ніжка. Esc повертає до інструмента «Вибір».</div></div>
+</div>
+<script>
+// ===== SOLVER (pure) =====
+const LEDC={red:[1.8,'#ff3b30','червоний'],yellow:[1.9,'#ffcc00','жовтий'],green:[2.8,'#34c759','зелений'],blue:[2.9,'#3a8bff','синій'],white:[2.9,'#f4f4ff','білий']};
+const LED_RS=15, RINT=0.1, RW=1e-3, GMIN=1e-9;
+function ldrR(lux){return Math.min(1e6,Math.max(200,8000*Math.pow(Math.max(lux,0.01)/10,-0.7)))}
+function solve(comps,lux,key=p=>p[0]+','+p[1]){
+  const idx=new Map();
+  const src=comps.find(c=>c.t==='src');
+  if(src) idx.set(key(src.b),-1);
+  let n=0;for(const c of comps)for(const p of[c.a,c.b]){const k=key(p);if(!idx.has(k))idx.set(k,n++)}
+  const els=comps.map(c=>{const A=idx.get(key(c.a)),B=idx.get(key(c.b));let g=GMIN,e=0,led=null;
+    switch(c.t){case'wire':g=1/RW;break;case'res':g=1/c.v;break;case'ldr':g=1/ldrR(lux);break;
+     case'sw':case'btn':g=c.on?1/RW:GMIN;break;case'src':g=1/(c.ri||RINT);e=c.v;break;case'led':led=c;break}
+    return{c,A,B,g,e,led,state:false}});
+  let V=new Float64Array(n);
+  for(let it=0;it<40;it++){
+    const M=Array.from({length:n},()=>new Float64Array(n+1));
+    for(let i=0;i<n;i++)M[i][i]+=GMIN;
+    for(const el of els){let g=el.g,e=el.e;
+      if(el.led){if(el.c.burnt||!el.state){g=GMIN;e=0}else{g=1/(el.c.rs||LED_RS);e=el.c.vf??LEDC[el.c.v][0]}}
+      const{A,B}=el;if(el.c.t==='isrc'){if(A>=0)M[A][n]-=el.c.i;if(B>=0)M[B][n]+=el.c.i;continue}
+      if(A>=0){M[A][A]+=g;M[A][n]+=g*e}if(B>=0){M[B][B]+=g;M[B][n]-=g*e}
+      if(A>=0&&B>=0){M[A][B]-=g;M[B][A]-=g}}
+    V=gauss(M,n);
+    let ch=false;
+    for(const el of els)if(el.led&&!el.c.burnt){const vd=(el.A>=0?V[el.A]:0)-(el.B>=0?V[el.B]:0),vf=el.c.vf??LEDC[el.c.v][0];
+      const on=el.state?vd>=vf:vd>vf;if(on!==el.state){el.state=on;ch=true}}
+    if(!ch)break}
+  const res=new Map(),vn=new Map();
+  for(const[k,i]of idx)vn.set(k,i<0?0:V[i]);
+  for(const el of els){const va=el.A>=0?V[el.A]:0,vb=el.B>=0?V[el.B]:0;let g=el.g,e=el.e;
+    if(el.led){if(el.c.burnt||!el.state){g=GMIN;e=0}else{g=1/(el.c.rs||LED_RS);e=el.c.vf??LEDC[el.c.v][0]}}
+    const I=el.c.t==='isrc'?el.c.i:g*(va-vb-e);res.set(el.c,{V:va-vb,I,P:Math.abs((va-vb)*I)})}
+  return{vn,res,hasRef:!!src}}
+function gauss(M,n){
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+    [M[c],M[p]]=[M[p],M[c]];const d=M[c][c];if(Math.abs(d)<1e-30)continue;
+    for(let r=0;r<n;r++)if(r!==c){const f=M[r][c]/d;if(f)for(let k=c;k<=n;k++)M[r][k]-=f*M[c][k]}}
+  const x=new Float64Array(n);for(let i=0;i<n;i++)x[i]=Math.abs(M[i][i])<1e-30?0:M[i][n]/M[i][i];return x}
+// ===== END SOLVER =====
+// ===== BREADBOARD (SVG, lab look; units = 2.54 mm pitch) =====
+const COLS=63,W=65.5,H=22.4;
+const YMAP={0:1.1,1:2.1,3:5.7,4:6.7,5:7.7,6:8.7,7:9.7,9:12.7,10:13.7,11:14.7,12:15.7,13:16.7,15:20.3,16:21.3};
+const RAIL={0:'RT+',1:'RT-',15:'RB-',16:'RB+'};
+const LET={3:'a',4:'b',5:'c',6:'d',7:'e',9:'f',10:'g',11:'h',12:'i',13:'j'};
+function isHole(p){const[x,y]=p;if(!(y in YMAP)||x<1||x>COLS)return false;if(y in RAIL)return x>=2&&x<=62&&x%6!==1;return true}
+function HK(p){if(typeof p==='string')return p;const[x,y]=p;if(y in RAIL)return RAIL[y];return(y<8?'T':'B')+x}
+function holeName(p){const[x,y]=p;return y in RAIL?(RAIL[y].endsWith('+')?'шина +':'шина −')+(y<8?' (верх)':' (низ)'):LET[y]+x}
+const hx=x=>x+0.75,hy=y=>YMAP[y];
+const POWER=()=>pwr.checked?[{t:'src',a:'RT+',b:'RT-',v:+pv.value,hid:1},{t:'wire',a:'RT+',b:'RB+',hid:1},{t:'wire',a:'RT-',b:'RB-',hid:1}]:[];
+const N=v=>+v.toFixed(3);
+const FONT="'Segoe UI','Helvetica Neue',Roboto,Arial,sans-serif";
+const T=(x,y,s,size,fill,w=400,anchor='middle')=>`<text x="${N(x)}" y="${N(y)}" font-size="${size}" font-weight="${w}" fill="${fill}" text-anchor="${anchor}" font-family="${FONT}">${s}</text>`;
+
+const NAMES={wire:'Перемичка',res:'Резистор',led:'LED',src:'Батарейка',sw:'Перемикач',btn:'Кнопка',ldr:'Фоторезистор'};
+const DEF={res:220,led:'red',src:9,sw:0,btn:0,ldr:0,wire:0};
+const TOOLS=[['sel','Вибір'],['del','Видалити'],['|'],['wire','Перемичка'],['parts','Компоненти'],['|'],['mcu','Контролер'],['|'],['probe','Щупи']];
+const WCOL=[['#e8a317','#8a5c06'],['#22a447','#0f5a2a'],['#8b5cf6','#4c1d95'],['#e67e22','#7c3d0b'],['#16a2b8','#0b5560'],['#f2f2f2','#9aa0a6']];
+const WC={red:['#e5383b','#721c1d'],black:['#33353b','#191a1d'],blue:['#2f6fe4','#173772'],yellow:['#f5c518','#7a620c'],green:['#22a447','#115223'],orange:['#e67e22','#733f11'],violet:['#8b5cf6','#452e7b'],white:['#f2f2f2','#9aa0a6'],grey:['#8a8f98','#45474c'],brown:['#8b5a2b','#452d15'],pink:['#ff6fae','#7f3757'],cyan:['#22c3e6','#116173'],navy:['#1e3a8a','#0f1d45'],lime:['#8bd636','#456b1b'],teal:['#14a39a','#0a514d'],maroon:['#8e1b3a','#470d1d'],gold:['#d4a017','#6a500b'],olive:['#7a8a2a','#3d4515'],coral:['#ff7f61','#7f3f30'],lavender:['#b9a4f5','#5c527a']};
+const WCN={auto:'авто (за шиною)',red:'червоний',black:'чорний',blue:'синій',yellow:'жовтий',green:'зелений',orange:'оранжевий',violet:'фіолетовий',white:'білий',grey:'сірий',brown:'коричневий',pink:'рожевий',cyan:'блакитний',navy:'темно-синій',lime:'салатовий',teal:'бірюзовий',maroon:'бордовий',gold:'золотий',olive:'оливковий',coral:'кораловий',lavender:'лавандовий'};let wireCol='auto';
+const WRED=['#e5383b','#8e1b1f'],WBLK=['#33353b','#0b0b0d'];
+let comps=[],labels=[],tool='sel',sel=null,probe=[null,null],drag=null,hover=null,result=null,all=[],lux=99,hot=new Map(),held=null,msg='',esp=null,mods=[];
+const sv=document.getElementById('sv'),pwr=document.getElementById('pwr'),pv=document.getElementById('pv');
+const L={board:document.getElementById('Lboard'),hl:document.getElementById('Lhl'),comp:document.getElementById('Lcomp'),flow:document.getElementById('Lflow'),top:document.getElementById('Ltop'),tip:document.getElementById('Ltip')};
+const tb=document.getElementById('tools');
+const LG=(x1,x2)=>`<line x1="${x1}" y1="0" x2="${x2}" y2="0" stroke="#7d838c" stroke-width="0.16" stroke-linecap="round"/>`;
+const ICON={
+ sel:`<path d="M-0.7 -1.3V1.0L-0.15 0.45L0.25 1.3L0.6 1.15L0.2 0.3H0.95Z" fill="var(--fg)" stroke="var(--panel)" stroke-width="0.08" stroke-linejoin="round"/>`,
+ wire:`<path d="M-1.7 0.9Q0 -2.0 1.7 0.9" fill="none" stroke="#8a5c06" stroke-width="0.4" stroke-linecap="round"/><path d="M-1.7 0.9Q0 -2.0 1.7 0.9" fill="none" stroke="#e8a317" stroke-width="0.3" stroke-linecap="round"/><circle cx="-1.7" cy="0.9" r="0.2" fill="#8a5c06"/><circle cx="1.7" cy="0.9" r="0.2" fill="#8a5c06"/>`,
+ res:LG(-1.9,1.9)+`<rect x="-0.75" y="-0.36" width="1.5" height="0.72" fill="url(#gRes)"/><ellipse cx="-0.75" rx="0.5" ry="0.5" fill="url(#gRes)"/><ellipse cx="0.75" rx="0.5" ry="0.5" fill="url(#gRes)"/><rect x="-0.62" y="-0.36" width="0.15" height="0.72" fill="#c8281f"/><rect x="-0.34" y="-0.36" width="0.15" height="0.72" fill="#c8281f"/><rect x="-0.06" y="-0.36" width="0.15" height="0.72" fill="#6b3f1d"/><rect x="0.5" y="-0.36" width="0.15" height="0.72" fill="#c9a227"/>`,
+ led:`<line x1="-0.4" y1="0" x2="-0.4" y2="1.5" stroke="#7d838c" stroke-width="0.14"/><line x1="0.4" y1="0" x2="0.4" y2="1.2" stroke="#7d838c" stroke-width="0.14"/><circle cy="-0.3" r="1.1" fill="#8a0d12"/><circle cy="-0.3" r="0.95" fill="url(#gLed_red)"/><ellipse cx="-0.35" cy="-0.7" rx="0.28" ry="0.16" fill="#fff" opacity=".6" transform="rotate(-35 -0.35 -0.7)"/>`,
+ sw:LG(-1.9,1.9)+`<rect x="-1.3" y="-0.55" width="2.6" height="1.1" rx="0.12" fill="#2f6fe4" stroke="#163f8c" stroke-width="0.05"/><rect x="-0.95" y="-0.28" width="1.9" height="0.56" rx="0.08" fill="#163f8c"/><rect x="0.05" y="-0.24" width="0.85" height="0.48" rx="0.08" fill="#eef0f3"/>`,
+ btn:`<rect x="-1.15" y="-1.15" width="2.3" height="2.3" rx="0.22" fill="url(#gBtnBody)" stroke="#555b66" stroke-width="0.04"/><rect x="-0.95" y="-0.95" width="1.9" height="1.9" rx="0.16" fill="#1c1f25"/><circle r="0.66" fill="url(#gBtnTop)"/>`,
+ ldr:LG(-1.9,1.9)+`<circle r="0.85" fill="url(#gLdr)" stroke="#8a5a14" stroke-width="0.05"/><path d="M-0.5 -0.34H0.4V-0.11H-0.4V0.11H0.4V0.34H-0.5" fill="none" stroke="#8a3b12" stroke-width="0.1"/>`,
+ src:`<rect x="-1.7" y="-0.8" width="3.4" height="1.6" rx="0.15" fill="url(#gBat)"/><rect x="-1.7" y="-0.8" width="0.75" height="1.6" rx="0.1" fill="#c8281f"/><text x="0.35" y="0.25" font-size="0.75" font-weight="700" fill="#fff" text-anchor="middle" font-family="Inter,sans-serif">9V</text>`,
+ probe:`<g transform="translate(-0.6,1.3) rotate(25)"><path d="M0 0L-0.15 -0.6H0.15Z" fill="#9aa0a6"/><rect x="-0.25" y="-2.6" width="0.5" height="2.0" rx="0.18" fill="#e5383b"/></g><g transform="translate(0.7,1.3) rotate(25)"><path d="M0 0L-0.15 -0.6H0.15Z" fill="#9aa0a6"/><rect x="-0.25" y="-2.6" width="0.5" height="2.0" rx="0.18" fill="#1f2329" stroke="#9aa0a6" stroke-width="0.07"/></g>`,
+ esp:`<rect x="-1.9" y="-1.1" width="3.8" height="2.2" rx="0.15" fill="#1d2128"/><rect x="-0.3" y="-0.75" width="1.7" height="1.5" rx="0.08" fill="url(#gCan)"/><rect x="-2.05" y="-0.35" width="0.6" height="0.7" rx="0.1" fill="#b9c0ca"/>${[...Array(7)].map((_,i)=>`<rect x="${-1.6+i*0.5}" y="-1.0" width="0.2" height="0.2" fill="#d7b44a"/><rect x="${-1.6+i*0.5}" y="0.8" width="0.2" height="0.2" fill="#d7b44a"/>`).join('')}`,
+ c3:`<rect x="-1.3" y="-1.2" width="2.8" height="2.4" rx="0.15" fill="#1d2128"/><rect x="-1.7" y="-0.45" width="0.7" height="0.9" rx="0.15" fill="#b9c0ca"/><rect x="-0.3" y="-0.5" width="1" height="1" fill="#3a3f48"/>${[...Array(5)].map((_,i)=>`<rect x="${-1.0+i*0.5}" y="-1.1" width="0.2" height="0.2" fill="#d7b44a"/><rect x="${-1.0+i*0.5}" y="0.9" width="0.2" height="0.2" fill="#d7b44a"/>`).join('')}`,
+ dht:`<rect x="-1.3" y="0.7" width="2.6" height="0.8" rx="0.1" fill="#1d6fd1"/><rect x="-1.0" y="-1.5" width="2.0" height="2.3" rx="0.15" fill="#5aa0f0" stroke="#1f5fae" stroke-width="0.07"/>${[0,1,2,3].map(r=>[0,1,2].map(c=>`<rect x="${-0.75+c*0.55}" y="${-1.25+r*0.5}" width="0.4" height="0.3" rx="0.05" fill="#1f5fae"/>`).join('')).join('')}`,
+ 'q:bc547':`<path d="M-1 1.2V-0.4Q0 -1.9 1 -0.4V1.2Z" fill="#1c1f25"/><path d="M-0.6 1.2v0.4M0 1.2v0.4M0.6 1.2v0.4" stroke="#9aa0a6" stroke-width="0.14"/><text y="0.55" font-size="0.42" fill="#c9ced6" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">547</text>`,
+ 'q:bc557':`<path d="M-1 1.2V-0.4Q0 -1.9 1 -0.4V1.2Z" fill="#1c1f25"/><path d="M-0.6 1.2v0.4M0 1.2v0.4M0.6 1.2v0.4" stroke="#9aa0a6" stroke-width="0.14"/><text y="0.55" font-size="0.42" fill="#c9ced6" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">557</text>`,
+ 'q:pn2222':`<path d="M-1 1.2V-0.4Q0 -1.9 1 -0.4V1.2Z" fill="#1c1f25"/><path d="M-0.6 1.2v0.4M0 1.2v0.4M0.6 1.2v0.4" stroke="#9aa0a6" stroke-width="0.14"/><text y="0.55" font-size="0.36" fill="#c9ced6" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">2222</text>`,
+ 'q:irlz44n':`<rect x="-1.1" y="-1.5" width="2.2" height="1.3" rx="0.08" fill="url(#gCan)"/><circle cy="-0.95" r="0.3" fill="#6b717b"/><rect x="-1.1" y="-0.3" width="2.2" height="1.2" rx="0.08" fill="#16181d"/><path d="M-0.55 0.9v0.6M0 0.9v0.6M0.55 0.9v0.6" stroke="#9aa0a6" stroke-width="0.16"/>`,
+ del:`<path d="M-0.9 -0.7H0.9L0.7 1.3H-0.7Z" fill="none" stroke="var(--warn)" stroke-width="0.18" stroke-linejoin="round"/><path d="M-1.2 -0.8H1.2M-0.4 -0.8V-1.2H0.4V-0.8M-0.25 -0.2V0.8M0.25 -0.2V0.8" fill="none" stroke="var(--warn)" stroke-width="0.18" stroke-linecap="round"/>`};
+const QP={bc547:{name:'BC547',kind:'npn',pins:['C','B','E'],beta:300,imax:0.1,pkg:'to92',sub:'до 100 мА, лаба 06'},
+ bc557:{name:'BC557',kind:'pnp',pins:['C','B','E'],beta:300,imax:0.1,pkg:'to92',sub:'до 100 мА, ключ на плюсі'},
+ pn2222:{name:'2N2222',kind:'npn',pins:['E','B','C'],beta:150,imax:0.6,pkg:'to92',sub:'до 600 мА'},
+ irlz44n:{name:'IRLZ44N',kind:'nmos',pins:['G','D','S'],imax:5,pkg:'to220',sub:'logic-level, ліхтар лаби 07'}};
+const KIND={npn:'NPN',pnp:'PNP',nmos:'N-MOSFET'};
+const MCUS=[['esp','ESP32-S3','ESP32-S3 DevKitC-1','44 піни, лаби 04 і 11'],['c3','C3 Mini','ESP32-C3 Super Mini','16 пінів, крокомір']];
+const PARTS=[['#','Пасивні'],['res','Резистор','Резистор','номінал задаєш, смужки за кодом'],['led','LED','Світлодіод','5 кольорів, згоряє понад 40 мА'],['sw','Перемикач','Перемикач','фіксується кліком'],['btn','Кнопка','Тактова кнопка','працює, поки тримаєш'],
+ ['#','Сенсори'],['ldr','LDR','Фоторезистор 5516','дільник на ADC, лаби 05–06'],['dht','DHT11','DHT11','температура й вологість'],
+ ['#','Транзистори'],...Object.entries(QP).map(([k,q])=>['q:'+k,q.name,q.name+' · '+KIND[q.kind],q.sub])];
+const SVGI=id=>'<svg viewBox="-2.1 -1.6 4.2 3.2" aria-hidden="true">'+ICON[id]+'</svg>';
+const DDS={mcu:{items:MCUS,cur:'esp',title:'Контролер'},parts:{items:PARTS,cur:'res',title:'Компоненти'}};
+function updDD(id){const D=DDS[id],m=D.items.find(x=>x[0]===D.cur);document.getElementById('t_'+id).innerHTML=SVGI(D.cur)+'<span>'+m[1]+' ▾</span>'}
+TOOLS.forEach(([id,n])=>{if(id==='|'){const d=document.createElement('span');d.className='sep';tb.appendChild(d);return}
+  if(DDS[id]){const D=DDS[id],w=document.createElement('span');w.className='dd';const b=document.createElement('button');b.className='tl';b.id='t_'+id;b.title=D.title;b.setAttribute('aria-haspopup','true');
+    const m=document.createElement('div');m.className='ddm';m.hidden=true;m.innerHTML=D.items.map(([k,a,full,sub])=>k==='#'?'<div class="ddh">'+a+'</div>':'<button data-t="'+k+'">'+SVGI(k)+'<span><b>'+full+'</b><small>'+sub+'</small></span></button>').join('');
+    b.onclick=()=>{const o=m.hidden;document.querySelectorAll('.ddm').forEach(x=>x.hidden=true);m.hidden=!o;if(o){D.cur&&(tool=D.cur);drawTools()}};m.onclick=e=>{const t=e.target.closest('[data-t]');if(!t)return;D.cur=t.dataset.t;tool=D.cur;m.hidden=true;updDD(id);drawTools()};
+    document.addEventListener('pointerdown',e=>{if(!w.contains(e.target))m.hidden=true});w.append(b,m);tb.appendChild(w);updDD(id);return}
+  const b=document.createElement('button');b.className='tl';b.title=n;b.innerHTML=SVGI(id)+'<span>'+n+'</span>';b.id='t_'+id;b.onclick=()=>{tool=id;drawTools()};tb.appendChild(b)});
+function drawTools(){TOOLS.filter(t=>t[0]!=='|').forEach(([id])=>document.getElementById('t_'+id).classList.toggle('on',DDS[id]?DDS[id].items.some(x=>x[0]===tool):id===tool))}
+drawTools();
+const fmt=(x,u)=>{const a=Math.abs(x);if(a<1e-12)return'0 '+u;for(const[m,p]of[[1e6,'М'],[1e3,'к'],[1,''],[1e-3,'м'],[1e-6,'мк'],[1e-9,'н']])if(a>=m*0.9995)return(x/m).toPrecision(3).replace('.',',')+' '+p+u;return'≈0 '+u};
+
+// ---- defs (gradients/filters from the lab generator)
+const LEDG={red:['#ff9a9a','#ee2d2d','#8a0d12'],yellow:['#fff3a0','#f5c518','#8a6a04'],green:['#a7f3c0','#22c55e','#0f5a2a'],blue:['#a8c8ff','#2f6fe4','#163f8c'],white:['#ffffff','#e8ecf5','#9aa3b5']};
+document.getElementById('defs').innerHTML=`
+<linearGradient id="gBoard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1ecdb"/><stop offset="1" stop-color="#ddd5bc"/></linearGradient>
+<linearGradient id="gChan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9b196"/><stop offset=".45" stop-color="#d3cbb1"/><stop offset="1" stop-color="#e9e3cf"/></linearGradient>
+<linearGradient id="gRes" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3dfb7"/><stop offset=".5" stop-color="#d9b98a"/><stop offset="1" stop-color="#a47f50"/></linearGradient>
+<linearGradient id="gLeg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f5f7"/><stop offset="1" stop-color="#8d939c"/></linearGradient>
+<radialGradient id="gBtnTop" cx=".38" cy=".32" r=".85"><stop offset="0" stop-color="#6b7280"/><stop offset="1" stop-color="#1f2329"/></radialGradient>
+<linearGradient id="gBtnBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d7dbe2"/><stop offset="1" stop-color="#8a919c"/></linearGradient>
+<linearGradient id="gPcb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2f3a"/><stop offset="1" stop-color="#14171e"/></linearGradient><linearGradient id="gCan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e4e8ee"/><stop offset=".5" stop-color="#b9c0ca"/><stop offset="1" stop-color="#8f97a3"/></linearGradient><linearGradient id="gUsb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8e96a2"/><stop offset=".5" stop-color="#dfe3e9"/><stop offset="1" stop-color="#a7aeb9"/></linearGradient>
+<linearGradient id="gBat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3f48"/><stop offset="1" stop-color="#121418"/></linearGradient>
+<radialGradient id="gLdr" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#f6d48a"/><stop offset="1" stop-color="#c98a2a"/></radialGradient>
+${Object.entries(LEDG).map(([k,c])=>`<radialGradient id="gLed_${k}" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="${c[0]}"/><stop offset=".45" stop-color="${c[1]}"/><stop offset="1" stop-color="${c[2]}"/></radialGradient><radialGradient id="gGlow_${k}"><stop offset="0" stop-color="${c[1]}" stop-opacity=".95"/><stop offset=".35" stop-color="${c[1]}" stop-opacity=".5"/><stop offset="1" stop-color="${c[1]}" stop-opacity="0"/></radialGradient>`).join('')}
+<radialGradient id="gHeat"><stop offset="0" stop-color="#ff5a00" stop-opacity=".8"/><stop offset="1" stop-color="#ff5a00" stop-opacity="0"/></radialGradient>
+<filter id="fShadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="0.18" stdDeviation="0.2" flood-color="#000" flood-opacity=".35"/></filter>
+<filter id="fShadowS" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0.04" dy="0.1" stdDeviation="0.09" flood-color="#000" flood-opacity=".45"/></filter>
+<g id="hole"><rect x="-0.23" y="-0.23" width="0.46" height="0.46" rx="0.1" fill="#4a463b"/><rect x="-0.155" y="-0.155" width="0.31" height="0.31" rx="0.06" fill="#0c0b09"/></g>`;
+
+// ---- static board
+(function(){const o=[];
+  o.push(`<rect x="0" y="0" width="${W}" height="${H}" rx="0.45" fill="url(#gBoard)" stroke="#b3a782" stroke-width="0.06" filter="url(#fShadow)"/>`);
+  o.push(`<rect x="0.1" y="0.1" width="${W-0.2}" height="${H-0.2}" rx="0.36" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="0.05"/>`);
+  o.push(`<rect x="0.3" y="${9.7+0.85}" width="${W-0.6}" height="${12.7-9.7-1.7}" rx="0.12" fill="url(#gChan)"/>`);
+  for(const[y,c]of[[0.5,'#d9363e'],[2.75,'#2f6fe4'],[19.65,'#2f6fe4'],[21.9,'#d9363e']])o.push(`<rect x="${hx(2)-0.35}" y="${y-0.04}" width="${hx(62)-hx(2)+0.7}" height="0.08" rx="0.04" fill="${c}"/>`);
+  for(const y in RAIL){const pl=RAIL[y].endsWith('+'),c=pl?'#d9363e':'#2f6fe4';o.push(T(0.85,hy(y)+0.35,pl?'+':'−',1.1,c,700),T(W-0.85,hy(y)+0.35,pl?'+':'−',1.1,c,700))}
+  for(let x=1;x<=COLS;x++)for(const y in YMAP)if(isHole([x,+y]))o.push(`<use href="#hole" x="${hx(x)}" y="${hy(y)}"/>`);
+  for(let x=1;x<=COLS;x++){const w=x%5===0?700:500;o.push(T(hx(x),4.95+0.26,x,0.62,'#6a6148',w),T(hx(x),17.45+0.26,x,0.62,'#6a6148',w))}
+  for(const y in LET)o.push(T(0.78,hy(y)+0.3,LET[y],0.8,'#6a6148',600),T(W-0.78,hy(y)+0.3,LET[y],0.8,'#6a6148',600));
+  L.board.innerHTML=o.join('')})();
+
+// ---- ESP32-S3-DevKitC-1 (pinout as in lab-04: USB left, J1 in row b, J3 in row i)
+const ESP_TOP=['GND','5V','14','13','12','11','10','9','46','3','8','18','17','16','15','7','6','5','4','RST','3V3','3V3'];
+const ESP_BOT=['GND','GND','19','20','21','47','48','45','0','35','36','37','38','39','40','41','42','2','1','RX','TX','GND'];
+const MODES={in:'Вхід',pu:'Вхід + PULLUP',pd:'Вхід + PULLDOWN',hi:'Вихід HIGH',lo:'Вихід LOW',inv:'Кнопка тримає HIGH',tog:'Кнопка перемикає'};
+const PROG=m=>m==='inv'||m==='tog';
+const BOARDS={s3:{name:'ESP32-S3-DevKitC-1',short:'ESP32-S3',top:ESP_TOP,bot:ESP_BOT,rt:4,rb:12,def:'16',rows:'b–i'},c3:{name:'ESP32-C3 Super Mini',short:'ESP32-C3',top:['5V','GND','3V3','4','3','2','1','0'],bot:['5','6','7','8','9','10','20','21'],rt:6,rb:11,def:'7',rows:'d–h'}};
+const B=()=>BOARDS[esp.type];
+const newEsp=(type,c0,modes={},src={})=>({type,c0,modes,src,st:{},out:{},lv:{},edge:{}});
+const pinP=n=>espPins().find(q=>q.n===n);
+function lvlOf(n){const q=pinP(n);if(!q)return 1;const v=result.vn.get(HK(q.p));if(v===undefined)return esp.lv[n]??1;return v>=2.475?1:v<=0.825?0:(esp.lv[n]??1)}
+function progStep(){let ch=false;for(const n in esp.modes){const m=esp.modes[n];if(!PROG(m))continue;const s=esp.src[n]||B().def,l=lvlOf(s);let o;
+  if(m==='inv')o=l===0;else{if((esp.lv[s]??1)===1&&l===0&&!esp.edge[n]){esp.st[n]=!esp.st[n];esp.edge[n]=1}o=!!esp.st[n]}
+  if(o!==!!esp.out[n]){esp.out[n]=o;ch=true}}return ch}
+function saveLv(){for(const n in esp.modes)if(PROG(esp.modes[n])){const s=esp.src[n]||B().def;esp.lv[s]=lvlOf(s)}esp.edge={}}
+const isGpio=n=>/^\d+$/.test(n);
+function espPins(){if(!esp)return[];const o=[];const b=B();b.top.forEach((n,i)=>o.push({n,p:[esp.c0+i,b.rt]}));b.bot.forEach((n,i)=>o.push({n,p:[esp.c0+i,b.rb]}));return o}
+function espAt(k){return espPins().find(q=>HK(q.p)===k)}
+function espComps(){if(!esp)return[];const P=espPins(),o=[];
+  const v5=P.find(q=>q.n==='5V');o.push({t:'src',a:v5.p,b:'EG',v:5,ri:0.2,hid:1,pin:'5V'});
+  for(const q of P){if(q.n==='GND')o.push({t:'wire',a:q.p,b:'EG',hid:1});
+    if(q.n==='3V3')o.push({t:'src',a:q.p,b:'EG',v:3.3,ri:0.4,hid:1,pin:'3V3'});
+    if(isGpio(q.n)){const m=esp.modes[q.n]||'in';
+      if(PROG(m))o.push({t:'src',a:q.p,b:'EG',v:esp.out[q.n]?3.3:0,ri:30,hid:1,pin:'GPIO'+q.n});
+      if(m==='hi'||m==='lo')o.push({t:'src',a:q.p,b:'EG',v:m==='hi'?3.3:0,ri:30,hid:1,pin:'GPIO'+q.n});
+      if(m==='pu')o.push({t:'src',a:q.p,b:'EG',v:3.3,ri:45000,hid:1,pin:'GPIO'+q.n});
+      if(m==='pd')o.push({t:'res',a:q.p,b:'EG',v:45000,hid:1})}}
+  return o}
+function pinsSVG(){const p=[];
+  for(const q of espPins()){const x=hx(q.p[0]),y=hy(q.p[1]),top=q.p[1]===B().rt;
+    const col=q.n==='GND'?'#9aa0a6':q.n==='3V3'?'#ff8a80':q.n==='5V'?'#ffb74d':isGpio(q.n)?'#e8ecf2':'#7d8796';
+    p.push(`<rect x="${N(x-0.32)}" y="${N(y-0.32)}" width="0.64" height="0.64" rx="0.06" fill="#0b0b0d"/><rect x="${N(x-0.13)}" y="${N(y-0.13)}" width="0.26" height="0.26" fill="#d7b44a"/>`);
+    p.push(T(x,top?y+0.95:y-0.6,q.n,0.42,col,700));
+    const m=esp.modes[q.n];if(m&&m!=='in'){const mc=(m==='hi'||(PROG(m)&&esp.out[q.n]))?'#ffd43b':PROG(m)?'#4b5563':m==='lo'?'#4b5563':'#6ea8fe';p.push(`<circle cx="${N(x)}" cy="${N(top?y+1.45:y-1.15)}" r="0.17" fill="${mc}"/>`)}}
+  return p.join('')}
+function espBox(){if(esp.type==='c3'){const c=esp.c0;return{x0:hx(c)-1.5,x1:hx(c+7)+0.7,y0:8.15,y1:15.25}}const c=esp.c0;return{x0:hx(c)-1.4,x1:hx(c+21)+2.3,y0:6.18,y1:16.22}}
+function c3SVG(){const{x0,x1,y0,y1}=espBox(),c=esp.c0,o=[],my=(y0+y1)/2;
+  if(sel==='esp')o.push(`<rect x="${N(x0-0.25)}" y="${N(y0-0.25)}" width="${N(x1-x0+0.5)}" height="${N(y1-y0+0.5)}" rx="0.5" fill="none" stroke="var(--acc)" stroke-width="0.25" stroke-opacity=".7"/>`);
+  o.push(`<g filter="url(#fShadow)"><rect x="${N(x0)}" y="${y0}" width="${N(x1-x0)}" height="${N(y1-y0)}" rx="0.35" fill="url(#gPcb)" stroke="#0b0d11" stroke-width="0.05"/></g>`);
+  o.push(`<rect x="${N(x0-0.5)}" y="${N(my-1.4)}" width="1.6" height="2.8" rx="0.45" fill="url(#gUsb)" stroke="#6b717b" stroke-width="0.04"/><rect x="${N(x0-0.3)}" y="${N(my-0.85)}" width="0.35" height="1.7" rx="0.15" fill="#2a2f3a"/>`);
+  for(const[yy,lab]of[[my-1.55,'B'],[my+0.65,'R']])o.push(`<rect x="${N(x0+1.35)}" y="${N(yy)}" width="0.9" height="0.9" rx="0.1" fill="#d7dbe2"/><circle cx="${N(x0+1.8)}" cy="${N(yy+0.45)}" r="0.22" fill="#1f2329"/>`+T(x0+2.65,yy+0.62,lab,0.4,'#c9ced6',700));
+  const qx=hx(c+3.6);o.push(`<rect x="${N(qx-1)}" y="${N(my-1)}" width="2" height="2" rx="0.1" fill="#15171c" stroke="#3a3f48" stroke-width="0.05"/><circle cx="${N(qx-0.7)}" cy="${N(my-0.7)}" r="0.08" fill="#59606b"/>`+T(qx,my+0.05,'ESP32',0.42,'#9aa3b5',700)+T(qx,my+0.55,'C3',0.42,'#9aa3b5',700));
+  o.push(`<rect x="${N(hx(c+5.6))}" y="${N(my-0.4)}" width="0.5" height="0.5" fill="#ff6b6b"/><rect x="${N(hx(c+6.3))}" y="${N(my-1.3)}" width="1.0" height="2.6" rx="0.1" fill="#e9e5da" stroke="#9aa0a6" stroke-width="0.04"/>`);
+  o.push(pinsSVG());return o.join('')}
+function espSVG(){if(esp.type==='c3')return c3SVG();const{x0,x1,y0,y1}=espBox(),c=esp.c0,o=[];
+  if(sel==='esp')o.push(`<rect x="${N(x0-0.25)}" y="${N(y0-0.25)}" width="${N(x1-x0+0.5)}" height="${N(y1-y0+0.5)}" rx="0.5" fill="none" stroke="var(--acc)" stroke-width="0.25" stroke-opacity=".7"/>`);
+  o.push(`<g filter="url(#fShadow)"><rect x="${N(x0)}" y="${y0}" width="${N(x1-x0)}" height="${N(y1-y0)}" rx="0.3" fill="url(#gPcb)" stroke="#0b0d11" stroke-width="0.05"/></g>`);
+  const my=(y0+y1)/2;
+  o.push(`<rect x="${N(x0-0.55)}" y="${N(my-1.45)}" width="1.6" height="2.9" rx="0.45" fill="url(#gUsb)" stroke="#6b717b" stroke-width="0.04"/><rect x="${N(x0-0.35)}" y="${N(my-0.9)}" width="0.35" height="1.8" rx="0.15" fill="#2a2f3a"/>`);
+  for(const[yy,lab]of[[my-3.1,'BOOT'],[my+2.5,'RST']])o.push(`<rect x="${N(x0+1.4)}" y="${N(yy)}" width="1.2" height="0.9" rx="0.1" fill="#d7dbe2"/><circle cx="${N(x0+2)}" cy="${N(yy+0.45)}" r="0.28" fill="#1f2329"/>`+T(x0+2,yy+(lab==='RST'?1.55:-0.2),lab,0.38,'#c9ced6',600));
+  const cx0=hx(c+8.4),cx1=hx(c+19.2);
+  o.push(`<rect x="${N(cx0-0.4)}" y="${N(y0+1.35)}" width="${N(cx1-cx0+0.8)}" height="${N(y1-y0-2.7)}" rx="0.15" fill="#1a1d23"/><rect x="${N(cx0)}" y="${N(y0+1.75)}" width="${N(cx1-cx0)}" height="${N(y1-y0-3.5)}" rx="0.12" fill="url(#gCan)" stroke="#6b717b" stroke-width="0.04"/>`);
+  o.push(T((cx0+cx1)/2,my-0.3,'ESP32-S3',0.95,'#59606b',700),T((cx0+cx1)/2,my+0.75,'WROOM-1 N16R8',0.5,'#6b717b',600));
+  const ax=cx1+0.75;o.push(`<path d="M${N(ax)} ${N(y0+2.2)}h0.8v1h-0.8v1h0.8v1h-0.8v1h0.8v1h-0.8v1h0.8" fill="none" stroke="#d7b44a" stroke-width="0.14"/>`);
+  o.push(T(hx(c+4),my+0.25,'ESP32-S3-DevKitC-1',0.55,'#9aa3b5',600));
+  o.push(pinsSVG());
+  return o.join('')}
+// ---- DHT11 module (3 pins in one row: VCC, DATA, GND; 10k pull-up on DATA, ~0.5 mA supply)
+const pinsOf=d=>d.t==='q'?QP[d.k].pins.map((n,i)=>({n,p:[d.x+i,d.y]})):dhtPins(d);
+const qp=(d,n)=>pinsOf(d).find(q=>q.n===n).p;
+function qHid(d){const P=QP[d.k];if(!d._h){d.st='off';d.ib=0;
+  if(P.kind==='nmos')d._h={ds:{t:'res',a:qp(d,'D'),b:qp(d,'S'),v:1e9,hid:1,qq:d}};
+  else{const n=P.kind==='npn';d._h={be:{t:'led',a:n?qp(d,'B'):qp(d,'E'),b:n?qp(d,'E'):qp(d,'B'),v:'red',vf:0.65,rs:20,hid:1,dio:1,qq:d},
+    act:{t:'isrc',a:n?qp(d,'C'):qp(d,'E'),b:n?qp(d,'E'):qp(d,'C'),i:0,hid:1,qq:d},sat:{t:'src',a:n?qp(d,'C'):qp(d,'E'),b:n?qp(d,'E'):qp(d,'C'),v:0.1,ri:1,hid:1,qq:d}}}}
+  const h=d._h;return P.kind==='nmos'?[h.ds]:[h.be,d.st==='sat'?h.sat:h.act]}
+const RON=vgs=>vgs<1.5?1e9:0.025+50*Math.exp(-(vgs-1.5)*4);
+function trStep(){let ch=false;for(const d of mods){if(d.t!=='q')continue;const P=QP[d.k],h=d._h;
+  if(P.kind==='nmos'){const vgs=VN(qp(d,'G'))-VN(qp(d,'S')),r=RON(vgs),st=vgs<1.5?'off':vgs<3?'act':'sat';d.vgs=vgs;d.st=st;if(Math.abs(Math.log(r/h.ds.v))>0.01){h.ds.v=r;ch=true}continue}
+  const ib=Math.max(0,result.res.get(h.be).I);d.ib=ib;const ic=P.beta*ib;
+  if(d.st==='sat'){const isat=result.res.get(h.sat).I;if(isat>ic*1.001+1e-9){d.st=ib>1e-7?'act':'off';h.act.i=ic;ch=true}}
+  else{const vce=(P.kind==='npn'?1:-1)*(VN(qp(d,'C'))-VN(qp(d,'E')));
+    if(ib>1e-7&&vce<0.1){d.st='sat';ch=true}else{const ni=ic;if(Math.abs(ni-h.act.i)>1e-9+1e-4*ni){h.act.i=h.act.i*0.3+ni*0.7;ch=true}d.st=ib>1e-7?'act':'off'}}}
+  return ch}
+function qInfo(d){const P=QP[d.k],h=d._h;if(!h||!result)return{};
+  if(P.kind==='nmos'){const id=Math.abs(result.res.get(h.ds)?.I||0);return{vgs:d.vgs||0,id,ron:h.ds.v,st:d.st}}
+  const ib=d.ib||0,ic=Math.abs(result.res.get(d.st==='sat'?h.sat:h.act)?.I||0),vce=(P.kind==='npn'?1:-1)*(VN(qp(d,'C'))-VN(qp(d,'E')));return{ib,ic,vce,st:d.st}}
+const STN={off:'закритий',act:'підсилює',sat:'відкритий'};
+function qBox(d){return{x0:hx(d.x)-0.6,x1:hx(d.x+2)+0.6,y0:hy(d.y)-(QP[d.k].pkg==='to220'?4.6:2.2),y1:hy(d.y)+0.6}}
+function qSVG(d){const P=QP[d.k],{x0,x1,y0}=qBox(d),y=hy(d.y),o=[],cx=(x0+x1)/2;
+  if(sel===d)o.push(`<rect x="${N(x0-0.2)}" y="${N(y0-0.2)}" width="${N(x1-x0+0.4)}" height="${N(y-y0+1.0)}" rx="0.3" fill="none" stroke="var(--acc)" stroke-width="0.2" stroke-opacity=".7"/>`);
+  for(const q of pinsOf(d)){const x=hx(q.p[0]);o.push(`<rect x="${N(x-0.1)}" y="${N(y-1.0)}" width="0.2" height="1.0" fill="url(#gLeg)"/>`+pin(x,y))}
+  if(P.pkg==='to220')o.push(`<g filter="url(#fShadowS)"><rect x="${N(x0+0.1)}" y="${N(y0)}" width="${N(x1-x0-0.2)}" height="2.2" rx="0.1" fill="url(#gCan)" stroke="#6b717b" stroke-width="0.04"/><rect x="${N(x0)}" y="${N(y0+1.9)}" width="${N(x1-x0)}" height="1.9" rx="0.1" fill="#16181d"/></g><circle cx="${N(cx)}" cy="${N(y0+0.85)}" r="0.42" fill="#6b717b"/>`+T(cx,y0+3.05,P.name,0.48,'#c9ced6',700));
+  else o.push(`<g filter="url(#fShadowS)"><path d="M${N(x0+0.1)} ${N(y-0.9)}V${N(y0+0.6)}Q${N(cx)} ${N(y0-0.7)} ${N(x1-0.1)} ${N(y0+0.6)}V${N(y-0.9)}Z" fill="#1c1f25"/></g>`+T(cx,y-1.3,P.name,0.42,'#c9ced6',700));
+  pinsOf(d).forEach(q=>o.push(T(hx(q.p[0]),y+0.82,q.n,0.48,'#1b2a44',700)));return o.join('')}
+const dhtPins=d=>[{n:'VCC',p:[d.x,d.y]},{n:'DATA',p:[d.x+1,d.y]},{n:'GND',p:[d.x+2,d.y]}];
+function modComps(){const o=[];for(const d of mods){if(d.t==='q'){o.push(...qHid(d));continue}const[v,da,g]=dhtPins(d).map(q=>q.p);o.push({t:'res',a:v,b:g,v:6600,hid:1},{t:'res',a:v,b:da,v:10000,hid:1})}return o}
+const VN=p=>result?.vn.get(HK(p))??0;
+function dhtState(d){const[v,,g]=dhtPins(d).map(q=>q.p),u=VN(v)-VN(g);
+  if(u<-0.5)return{ok:0,msg:'VCC і GND переплутані ('+u.toFixed(2).replace('.',',')+' В)',bad:1};
+  if(u<3.0)return{ok:0,msg:'немає живлення: між VCC і GND '+u.toFixed(2).replace('.',',')+' В, треба 3,3–5 В'};
+  if(u>5.5)return{ok:0,msg:'забагато: '+u.toFixed(1)+' В',bad:1};return{ok:1,u}}
+function netRoot(k){const P={};const F=x=>{while(P[x]&&P[x]!==x)x=P[x];return x};for(const c of all)if(c.t==='wire'||((c.t==='sw'||c.t==='btn')&&c.on)){const A=F(HK(c.a)),B2=F(HK(c.b));if(A!==B2)P[A]=B2}return F(k)}
+function dhtBox(d){return{x0:hx(d.x)-0.55,x1:hx(d.x+2)+0.55,y0:hy(d.y)-5.4,y1:hy(d.y)+0.6}}
+const modAt=p=>mods.find(d=>{const b=d.t==='q'?qBox(d):dhtBox(d);return p.x>b.x0&&p.x<b.x1&&p.y>b.y0&&p.y<b.y1});
+function dhtSVG(d){const{x0,x1,y0}=dhtBox(d),y=hy(d.y),o=[];
+  if(sel===d)o.push(`<rect x="${N(x0-0.2)}" y="${N(y0-0.2)}" width="${N(x1-x0+0.4)}" height="${N(y-y0+1.0)}" rx="0.3" fill="none" stroke="var(--acc)" stroke-width="0.2" stroke-opacity=".7"/>`);
+  o.push(`<g filter="url(#fShadowS)"><rect x="${N(x0)}" y="${N(y-1.6)}" width="${N(x1-x0)}" height="2.2" rx="0.15" fill="#1d6fd1" stroke="#134c94" stroke-width="0.04"/><rect x="${N(x0+0.15)}" y="${N(y0)}" width="${N(x1-x0-0.3)}" height="${N(y-1.5-y0)}" rx="0.25" fill="#5aa0f0" stroke="#1f5fae" stroke-width="0.06"/></g>`);
+  for(let r=0;r<5;r++)for(let c=0;c<3;c++)o.push(`<rect x="${N(x0+0.5+c*0.75)}" y="${N(y0+0.35+r*0.62)}" width="0.5" height="0.36" rx="0.06" fill="#1f5fae"/>`);
+  o.push(`<rect x="${N(x0+0.4)}" y="${N(y-1.35)}" width="0.55" height="0.35" fill="#2b2b2b"/>`+T((x0+x1)/2,y-0.95,'DHT11',0.42,'#e8f1ff',700));
+  for(const q of dhtPins(d)){const x=hx(q.p[0]);o.push(`<rect x="${N(x-0.15)}" y="${N(y-0.55)}" width="0.3" height="0.6" fill="url(#gLeg)"/>`+pin(x,y)+T(x,y+0.82,q.n==='VCC'?'+':q.n==='GND'?'−':'S',0.5,'#1b2a44',700))}
+  return o.join('')}
+const EX={
+ q:{n:'BC547 ключ: GPIO21 → 1к → база, LED від 5 В',v:0,esp:{c0:1,modes:{21:'hi'}},m:[{t:'q',k:'bc547',x:40,y:11}],c:[['wire',[1,13],[2,15]],['wire',[2,3],[3,0]],['wire',[5,13],[30,13]],['res',[30,12],[34,12],1000],['wire',[34,13],[41,13]],['wire',[42,13],[42,15]],['wire',[44,0],[44,3]],['res',[44,5],[48,5],220],['led',[48,7],[49,7],'red'],['wire',[49,4],[40,13]]],p:[[40,12],[46,15]],l:[[5,'GPIO21 → база'],[40,'BC547']]},
+ dht:{n:'DHT11 на ESP32-S3: DATA → GPIO4, живлення 3V3',v:0,esp:{c0:1,modes:{4:'pu'}},m:[{x:30,y:3}],c:[['wire',[21,3],[30,5]],['wire',[19,3],[31,6]],['wire',[1,3],[2,1]],['wire',[32,4],[34,1]]],p:[[31,7],[32,7]],l:[[19,'GPIO4 ← DATA']]},
+ c3:{n:'ESP32-C3 Super Mini: LED на GPIO3 + кнопка GPIO7',v:0,esp:{type:'c3',c0:3,modes:{3:'inv',7:'pu'},src:{3:'7'}},c:[['wire',[4,3],[4,1]],['wire',[7,3],[20,3]],['res',[20,5],[24,5],220],['led',[24,7],[25,7],'red'],['wire',[25,3],[26,1]],['wire',[5,13],[30,13]],['btn',[30,7],[30,9]],['wire',[30,3],[32,1]]],p:[[30,12],[30,4]],l:[[7,'GPIO3 → LED'],[27,'GPIO7 ← кнопка']]},
+ esp:{n:'ESP32-S3: LED на GPIO21 + кнопка GPIO16',v:0,esp:{c0:1,modes:{21:'inv',16:'pu'},src:{21:'16'}},c:[['wire',[1,13],[2,15]],['wire',[5,13],[27,13]],['res',[27,11],[31,11],220],['led',[31,9],[32,9],'red'],['wire',[32,13],[32,15]],['wire',[14,3],[35,3]],['btn',[35,7],[35,9]],['wire',[35,13],[36,15]]],p:[[35,4],[40,15]],l:[[5,'GPIO21 → LED'],[14,'GPIO16 ← кнопка']]},
+ led:{n:'LED + резистор 220 Ом (5 В)',v:5,c:[['wire',[10,0],[10,3]],['res',[10,5],[14,5],220],['led',[14,7],[16,7],'red'],['wire',[16,3],[16,1]]],p:[[14,4],[16,4]]},
+ ldr:{n:'Дільник LDR + 10к (3,3 В, GPIO4)',v:3.3,c:[['wire',[5,0],[5,3]],['ldr',[5,5],[9,5]],['res',[9,7],[9,9],10000],['wire',[9,13],[9,15]]],p:[[9,4],[12,15]],l:[[9,'GPIO4']]},
+ pull:{n:'Кнопка з підтяжкою 10к (3,3 В, GPIO16)',v:3.3,c:[['wire',[20,0],[20,3]],['res',[20,5],[24,5],10000],['btn',[24,7],[24,9]],['wire',[24,13],[24,15]]],p:[[24,4],[27,15]],l:[[24,'GPIO16']]},
+ div:{n:'Перевірка: дільник 10к/10к (5 В)',v:5,c:[['wire',[40,0],[40,3]],['res',[40,5],[44,5],10000],['res',[44,6],[48,6],10000],['wire',[48,3],[48,1]]],p:[[44,4],[48,4]],l:[[44,'має бути 2,5 В']]},
+ burn:{n:'LED без резистора (що буде?)',v:5,c:[['wire',[30,0],[30,3]],['sw',[30,5],[33,5]],['led',[33,7],[35,7],'red'],['wire',[35,3],[35,1]]],p:[[33,4],[35,4]],l:[[31.5,'клацни перемикач']]},
+ err:{n:'Помилка: резистор в одному стовпці',v:5,c:[['wire',[10,0],[10,3]],['res',[10,5],[10,7],220],['led',[10,9],[12,9],'red'],['wire',[12,13],[12,15]]],p:[[10,10],[12,15]],l:[[10,'резистор закорочено стовпцем, LED без живлення']]}};
+const exs=document.getElementById('ex');
+for(const k in EX){const o=document.createElement('option');o.value=k;o.textContent=EX[k].n;exs.appendChild(o)}
+exs.onchange=()=>{const e=EX[exs.value];if(!e)return;esp=e.esp?newEsp(e.esp.type||'s3',e.esp.c0,{...e.esp.modes},{...(e.esp.src||{})}):null;mods=(e.m||[]).map(d=>d.t==='q'?{t:'q',k:d.k,x:d.x,y:d.y}:{t:'dht',x:d.x,y:d.y,temp:23,hum:45});comps=e.c.map(([t,a,b,v])=>({t,a,b,v:v??DEF[t],on:false}));labels=e.l||[];probe=e.p.map(p=>p.slice());if(e.v)pv.value=String(e.v);pwr.checked=!!e.v;sel=null;hot.clear();exs.value='';recalc()};
+document.getElementById('clr').onclick=()=>{comps=[];esp=null;mods=[];labels=[];probe=[null,null];sel=null;recalc()};
+pwr.onchange=pv.onchange=()=>recalc();
+const luxIn=document.getElementById('lux');
+luxIn.oninput=()=>{lux=Math.round(Math.pow(10,+luxIn.value)-1);document.getElementById('luxv').textContent=lux;recalc()};
+
+const powered=()=>pwr.checked||!!esp;
+function recalc(){for(let it=0;it<60;it++){all=[...espComps(),...POWER(),...modComps(),...comps];result=solve(all,lux,HK);const c1=esp?progStep():false,c2=trStep();if(!c1&&!c2)break}if(esp)saveLv();panel();render()}
+const used=()=>{const s=new Set();if(esp)for(let x=esp.c0;x<esp.c0+B().top.length;x++)for(let y=B().rt;y<=B().rb;y++)s.add(x+','+y);for(const d of mods)for(const q of pinsOf(d))s.add(q.p.join(','));for(const c of comps)for(const p of[c.a,c.b])s.add(p.join(','));return s};
+function pt(ev){const q=sv.createSVGPoint();q.x=ev.clientX;q.y=ev.clientY;const{x,y}=q.matrixTransform(sv.getScreenCTM().inverse());
+  let best=null,bd=0.6;for(let gx=1;gx<=COLS;gx++)for(const gy in YMAP){const p=[gx,+gy];if(!isHole(p))continue;const d=Math.hypot(hx(gx)-x,hy(gy)-y);if(d<bd){bd=d;best=p}}return{x,y,g:best}}
+function distSeg(p,c){const ax=hx(c.a[0]),ay=hy(c.a[1]),bx=hx(c.b[0]),by=hy(c.b[1]),dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1;
+  const t=Math.max(0,Math.min(1,((p.x-ax)*dx+(p.y-ay)*dy)/L2));return Math.hypot(p.x-ax-t*dx,p.y-ay-t*dy)}
+function pick(p){let best=null,bd=0.6;for(const c of comps){const d=distSeg(p,c);if(d<bd){bd=d;best=c}}return best}
+sv.onpointerdown=ev=>{const p=pt(ev);sv.setPointerCapture(ev.pointerId);msg='';
+  const inEsp=esp&&(()=>{const b=espBox();return p.x>b.x0&&p.x<b.x1&&p.y>b.y0&&p.y<b.y1})();
+  if(tool==='sel'){const c=pick(p)||modAt(p)||(inEsp?'esp':null);sel=c;if(c&&c.t==='sw')c.on=!c.on;if(c&&c.t==='btn'){c.on=true;held=c}recalc();return}
+  if(tool==='del'){const pi=probe.findIndex(q=>q&&Math.min(Math.hypot(hx(q[0])-p.x,hy(q[1])-p.y),Math.hypot(hx(q[0])+0.7-p.x,hy(q[1])-1.2-p.y))<0.8);
+    if(pi>=0){probe=pi?[probe[0],null]:[null,null];panel();render();return}if(!pick(p)&&modAt(p)){const d=modAt(p);mods=mods.filter(x=>x!==d);if(sel===d)sel=null;recalc();return}if(!pick(p)&&inEsp){esp=null;if(sel==='esp')sel=null;recalc();return}const c=pick(p);if(c){comps=comps.filter(x=>x!==c);if(sel===c)sel=null;recalc()}return}
+  if(!p.g)return;
+  if(tool.startsWith('q:')){const k=tool.slice(2),y=p.g[1];if(y in RAIL){msg='Транзистор ставиться в ряди a–j';panel();return}const x=Math.min(p.g[0],COLS-2),u=used();
+    for(let i=0;i<3;i++)if(u.has((x+i)+','+y)){msg='Для транзистора потрібні 3 вільні отвори підряд';panel();return}
+    const d={t:'q',k,x,y};mods.push(d);sel=d;recalc();return}
+  if(tool==='dht'){const y=p.g[1];if(y in RAIL){msg='DHT11 ставиться в ряди a–j, не в шину';panel();return}const x=Math.min(p.g[0],COLS-2),u=used();
+    for(let i=0;i<3;i++)if(u.has((x+i)+','+y)){msg='Для DHT11 потрібні 3 вільні отвори підряд';panel();return}
+    const d={t:'dht',x,y,temp:23,hum:45};mods.push(d);sel=d;recalc();return}
+  if(tool==='esp'||tool==='c3'){if(esp){msg='На макетці вже стоїть '+B().short+'. Поки що можна лише одну плату: видали її, щоб поставити іншу';panel();return}const bd=BOARDS[tool==='c3'?'c3':'s3'],nn=bd.top.length,c0=Math.min(Math.max(1,p.g[0]),COLS-nn+1),u=used();
+    for(let x=c0;x<c0+nn;x++)for(let y=bd.rt;y<=bd.rb;y++)if(u.has(x+','+y)){msg='Місце під плату зайняте (стовпці '+c0+'–'+(c0+nn-1)+', ряди '+bd.rows+')';panel();return}
+    esp=newEsp(tool==='c3'?'c3':'s3',c0);sel='esp';recalc();return}
+  if(tool==='probe'){if(!probe[0]||probe[1])probe=[p.g,null];else probe[1]=p.g;panel();render();return}
+  if(used().has(p.g.join(','))){msg='Цей отвір уже зайнятий';panel();return}
+  drag={a:p.g,b:p.g}};
+sv.onpointermove=ev=>{const p=pt(ev);const nh=p.g;if(String(nh)!==String(hover)){hover=nh;renderHover();hovInfo();if(!drag)renderTop()}if(drag&&p.g&&String(drag.b)!==String(p.g)){drag.b=p.g;renderTop()}};
+sv.onpointerup=()=>{if(held){held.on=false;held=null;recalc()}
+  if(drag){const{a,b}=drag;drag=null;renderTop();let e2=b;if(a.join()===b.join()){if(!PT.includes(tool))return;e2=dEnd(a);if(!e2){msg='Тут не вистачає місця, потягни деталь вручну';panel();return}}
+    if(used().has(e2.join(','))){msg='Цей отвір уже зайнятий';panel();return}
+    const c={t:tool,a,b:e2,v:DEF[tool],on:false};if(tool==='wire'&&wireCol!=='auto')c.col=wireCol;comps.push(c);sel=c;recalc()}};
+sv.onpointerleave=()=>{hover=null;renderHover()};
+addEventListener('keydown',e=>{if(e.key==='Escape'){tool='sel';drag=null;document.querySelectorAll('.ddm').forEach(x=>x.hidden=true);drawTools();renderTop();return}if((e.key==='Delete'||e.key==='Backspace')&&sel&&document.activeElement.tagName!=='INPUT'){comps=comps.filter(x=>x!==sel);sel=null;recalc()}});
+function hovInfo(){if(!hover)return;const v=result?.vn.get(HK(hover)),ep=espAt(HK(hover));document.getElementById('hov').innerHTML='<b>'+holeName(hover)+'</b>'+(ep?' (пін '+ep.n+' ESP32)':'')+': '+
+  (hover[1] in RAIL?'з’єднаний з усією шиною.':'з’єднаний з '+(hover[1]<8?'a–e':'f–j')+' стовпця '+hover[0]+'.')+(v!==undefined&&powered()?' Напруга: <b>'+v.toFixed(2).replace('.',',')+' В</b>':'')}
+
+function dhtInfo(pinP,mode){const r=netRoot(HK(pinP)),d=mods.find(d=>d.t==='dht'&&netRoot(HK(dhtPins(d)[1].p))===r);if(!d)return null;const st=dhtState(d);
+  if(!st.ok)return{err:'DHT11 мовчить: '+st.msg};if(mode!=='in'&&mode!=='pu')return{err:'DHT11 не відповість: пін має бути входом'};return{d}}
+function dhtRead(pinP,mode){const i=dhtInfo(pinP,mode);return!i?'':i.err?i.err:'DHT11: '+i.d.temp+' °C, '+i.d.hum+' %'}
+function attached(pinP){const r=netRoot(HK(pinP)),o=[];
+  for(const c of comps)if(c.t!=='wire'&&[c.a,c.b].some(q=>netRoot(HK(q))===r))o.push(c.t==='res'?'резистор '+fmt(c.v,'Ом'):c.t==='led'?'LED':NAMES[c.t].toLowerCase());
+  for(const d of mods)pinsOf(d).forEach(q=>{if(netRoot(HK(q.p))===r)o.push((d.t==='q'?QP[d.k].name:'DHT11')+' ('+q.n+')')});
+  if(netRoot('EG')===r||netRoot('RT-')===r&&pwr.checked)o.push('GND');return[...new Set(o)]}
+function espPanel(){const E=document.getElementById('espc');E.hidden=!esp;if(!esp)return;document.getElementById('esph').textContent=B().short+': піни';
+  const busy=new Set();for(const c of comps)for(const q of[c.a,c.b])busy.add(HK(q));
+  const rows=espPins().filter(q=>isGpio(q.n)&&(busy.has(HK(q.p))||(esp.modes[q.n]||'in')!=='in'));
+  const v3=all.filter(c=>c.pin==='3V3').reduce((a,c)=>a+Math.abs(result.res.get(c).I),0);
+  document.getElementById('esps').innerHTML='3V3 віддає <b>'+fmt(v3,'А')+'</b>';
+  let h='';
+  if(!rows.length)h='<div class="mut">Під’єднай щось до піна плати (вільні отвори над і під нею), і тут з’явиться картка піна.</div>';
+  else h='<div class="pins">'+rows.map(q=>{const m=esp.modes[q.n]||'in',out=!['in','pu','pd'].includes(m),v=VN(q.p),
+      lv=v>=2.475?['h','HIGH']:v<=0.825?['l','LOW']:['u','?'],pct=Math.max(0,Math.min(100,v/3.3*100)),
+      src=all.find(c=>c.pin==='GPIO'+q.n),I=src?Math.abs(result.res.get(src).I):0,di=dhtInfo(q.p,m),at=attached(q.p);
+    let x='<div class="pin'+(I>0.04?' over':'')+'"><div class="pin-h"><span class="pin-n">GPIO'+q.n+'</span><span class="chip">'+(out?'вихід':'вхід')+'</span><span class="lvl '+lv[0]+'">'+lv[1]+'</span></div>';
+    x+='<div><div class="volt"><b>'+v.toFixed(2).replace('.',',')+'</b><span>В</span>'+(out?'<span class="cur">струм '+fmt(I,'А')+(I>0.04?' · понад 40 мА!':'')+'</span>':'')+'</div><div class="vbar"><i style="left:'+pct.toFixed(1)+'%"></i></div><div class="vbar-l"><span>0</span><span>LOW ≤0,8</span><span>HIGH ≥2,5</span><span>3,3</span></div></div>';
+    if(di&&di.d)x+='<div class="rd"><div><small>Температура</small><b>'+di.d.temp+' °C</b></div><div><small>Вологість</small><b>'+di.d.hum+' %</b></div></div>';
+    if(di&&di.err)x+='<div class="note">'+di.err+'</div>';
+    if(lv[0]==='u'&&!out)x+='<div class="note">Рівень невизначений: між 0,8 і 2,5 В плата може читати і 0, і 1.</div>';
+    x+='<div class="con">'+(at.length?'Під’єднано: '+at.join(', '):'Нічого не під’єднано')+'</div>';
+    x+='<label class="pm"><span>Режим</span><select class="v" data-pin="'+q.n+'" aria-label="Режим GPIO'+q.n+'">'+Object.entries(MODES).map(([k,t])=>'<option value="'+k+'"'+(m===k?' selected':'')+'>'+t+'</option>').join('')+'</select></label>';
+    if(PROG(m))x+='<label class="pm"><span>Кнопка на</span><select class="v" data-src="'+q.n+'">'+espPins().filter(z=>isGpio(z.n)&&z.n!==q.n&&!PROG(esp.modes[z.n])&&!['hi','lo'].includes(esp.modes[z.n])&&(busy.has(HK(z.p))||esp.modes[z.n])).map(z=>'<option value="'+z.n+'"'+((esp.src[q.n]||B().def)===z.n?' selected':'')+'>GPIO'+z.n+'</option>').join('')+'</select></label>';
+    return x+'</div>'}).join('')+'</div>';
+  E.querySelector('#espb').innerHTML=h;
+  E.querySelectorAll('select[data-pin]').forEach(el=>el.onchange=()=>{esp.modes[el.dataset.pin]=el.value;recalc()});E.querySelectorAll('select[data-src]').forEach(el=>el.onchange=()=>{esp.src[el.dataset.src]=el.value;recalc()})}
+function panel(){
+  const d=document.getElementById('dmm'),vn=result.vn;
+  if(probe[0]&&probe[1]){const a=vn.get(HK(probe[0])),b=vn.get(HK(probe[1]));d.textContent=(a===undefined||b===undefined)?'щуп у порожньому ряду':(a-b).toFixed(3).replace('.',',')+' V'}
+  else d.textContent=probe[0]?'став чорний щуп':'— — —';
+  const s=document.getElementById('sel');
+  const HEAD=(ic,name,loc)=>'<div class="sh">'+SVGI(ic)+'<div style="min-width:0"><div class="sh-n">'+name+'</div>'+(loc?'<div class="sh-l">'+loc+'</div>':'')+'</div></div>';
+  const TILE=(k,v,cls='')=>'<div class="'+cls+'"><small>'+k+'</small><b>'+v+'</b></div>';
+  const FIELD=(lab,inp,unit)=>'<label class="fld"><span>'+lab+'</span><span class="fi">'+inp+(unit?'<em>'+unit+'</em>':'')+'</span></label>';
+  if(sel&&sel.t==='q'){const P=QP[sel.k],q=qInfo(sel),Pn=pinsOf(sel),hot=(q.ic??q.id)>P.imax?'warn':'';
+    s.innerHTML=HEAD('q:'+sel.k,P.name+' · '+KIND[P.kind],'отвори '+holeName(Pn[0].p)+'–'+holeName(Pn[2].p))+'<div class="rd">'+TILE('Стан',STN[q.st]||'—')+(P.kind==='nmos'?TILE('Vgs',fmt(q.vgs,'В')):TILE('Струм бази',fmt(q.ib,'А')))+'</div><div class="rd" style="margin-top:6px">'+(P.kind==='nmos'?TILE('Струм стоку',fmt(q.id,'А'),hot)+TILE('Опір каналу',q.ron>1e8?'∞':fmt(q.ron,'Ом')):TILE('Струм колектора',fmt(q.ic,'А'),hot)+TILE('Vce',fmt(q.vce,'В')))+'</div>'+
+      '<div class="hint">Ніжки зліва направо: '+P.pins.join(' ')+(P.pkg==='to92'?' (плоска сторона з написом до тебе)':' (написом до тебе)')+'. '+(P.kind==='nmos'?'Відкривається, коли Vgs вище 2 В, повністю від 4 В. Модель приблизна.':'β ≈ '+P.beta+'. Модель приблизна: Vbe 0,65 В, Vce у насиченні 0,1 В.')+'</div>'}else
+  if(sel&&sel.t==='dht'){const st=dhtState(sel),P=dhtPins(sel);
+    s.innerHTML=HEAD('dht','DHT11','отвори '+holeName(P[0].p)+'–'+holeName(P[2].p))+'<div class="rd">'+TILE('Живлення',st.ok?st.u.toFixed(2).replace('.',',')+' В':'немає',st.ok?'':'warn')+TILE('Струм','≈'+fmt(st.ok?st.u/6600:0,'А'))+'</div>'+(st.ok?'':'<div class="note" style="margin-top:6px">'+st.msg+'</div>')+
+      FIELD('Температура в кімнаті (0–50)','<input id="dt" type="number" min="0" max="50" value="'+sel.temp+'">','°C')+FIELD('Вологість (20–90)','<input id="dh" type="number" min="20" max="90" value="'+sel.hum+'">','%')+
+      '<div class="hint">Піни зліва направо: + VCC, S DATA, − GND. Звір зі своїм модулем. Покази видно в картці піна ESP32, до якого йде DATA.</div>';
+    const cl=(v,a,b)=>Math.min(b,Math.max(a,Math.round(+v||0)));document.getElementById('dt').onchange=e=>{sel.temp=cl(e.target.value,0,50);recalc()};document.getElementById('dh').onchange=e=>{sel.hum=cl(e.target.value,20,90);recalc()}}else
+  if(sel==='esp'){const b=B(),v3=all.filter(c=>c.pin==='3V3').reduce((a,c)=>a+Math.abs(result.res.get(c).I),0),used=espPins().filter(q=>isGpio(q.n)&&attached(q.p).length).length;
+    s.innerHTML=HEAD(esp.type==='c3'?'c3':'esp',b.name,'стовпці '+esp.c0+'–'+(esp.c0+b.top.length-1)+', ряди '+b.rows)+'<div class="rd t3">'+TILE('Живлення','USB')+TILE('3V3 віддає',fmt(v3,'А'))+TILE('GPIO у схемі',used)+'</div><div class="hint">Режим кожного піна обирається в картці пінів нижче. Повну програму плата не виконує, але є дві готові «програми» для кнопки.</div>'}else
+  if(!sel){s.innerHTML=HEAD('sel','Нічого не вибрано','')+'<div class="hint" style="margin-top:0">Інструмент «Вибір»: клацни на деталь, щоб побачити її напругу, струм і параметри. Перемикач перемикається кліком, кнопку тримай натиснутою.</div>'}else{
+    const r=result.res.get(sel)||{V:0,I:0,P:0},I=Math.abs(r.I);let ed='',title=NAMES[sel.t],cI='',cP='';
+    if(sel.t==='res'){title+=' '+fmt(sel.v,'Ом');ed=FIELD('Опір','<input id="ed" type="number" min="1" value="'+sel.v+'">','Ом');if(r.P>0.25)cP=r.P>1?'warn':'hot'}
+    if(sel.t==='ldr'){ed='<div class="rd" style="margin-top:8px">'+TILE('Опір при 99 лк',fmt(ldrR(lux),'Ом'))+'</div>';if(r.P>0.25)cP='hot'}
+    if(sel.t==='src')ed=FIELD('Напруга','<input id="ed" type="number" step="0.1" min="0" value="'+sel.v+'">','В');
+    if(sel.t==='led'){title=LEDC[sel.v][2][0].toUpperCase()+LEDC[sel.v][2].slice(1)+' LED'+(sel.burnt?' (згорів)':'');cI=sel.burnt?'warn':I>0.025?'hot':'';
+      ed=FIELD('Колір','<select id="ed">'+Object.entries(LEDC).map(([k,v])=>'<option value="'+k+'"'+(k===sel.v?' selected':'')+'>'+v[2]+', Vf≈'+String(v[0]).replace('.',',')+' В</option>').join('')+'</select>','')+(sel.burnt?'<button id="fix" class="fixb">Замінити згорілий LED</button>':'')}
+    if(sel.t==='wire')ed='<div class="fld"><span>Колір: '+WCN[sel.col||'auto']+'</span><div class="swt">'+Object.keys(WCN).map(k=>'<button data-col="'+k+'" title="'+WCN[k]+'" aria-label="'+WCN[k]+'" class="'+((sel.col||'auto')===k?'on':'')+'" style="background:'+(k==='auto'?'conic-gradient(#e5383b 0 33%,#33353b 0 66%,#f5c518 0)':WC[k][0])+'"></button>').join('')+'</div></div><div class="hint">Новий колір запам’ятовується для наступних перемичок. Колір нічого не змінює електрично, але звичай такий: червоний для +, чорний або синій для GND.</div>';
+    if(sel.t==='sw'||sel.t==='btn')title+=sel.on?' · замкнено':' · розімкнено';
+    s.innerHTML=HEAD(sel.t,title,holeName(sel.a)+' → '+holeName(sel.b))+'<div class="rd t3">'+TILE('Напруга',fmt(r.V,'В'))+TILE('Струм',fmt(I,'А'),cI)+TILE('Потужність',fmt(r.P,'Вт'),cP)+'</div>'+ed;
+    s.querySelectorAll('[data-col]').forEach(b=>b.onclick=()=>{const k=b.dataset.col;if(k==='auto')delete sel.col;else sel.col=k;wireCol=k;recalc()});
+    const e=document.getElementById('ed');if(e)e.onchange=()=>{sel.v=sel.t==='led'?e.value:Math.max(sel.t==='res'?1:0,+e.value||0);recalc()};
+    const f=document.getElementById('fix');if(f)f.onclick=()=>{sel.burnt=false;hot.delete(sel);recalc()}}
+  espPanel();
+  const w=msg?['<div class="hot">'+msg+'</div>']:[];
+  for(const c of all){const r=result.res.get(c);if(!r)continue;const I=Math.abs(r.I);
+    if(c.t==='led'&&c.burnt)w.push('<div class="warn">LED згорів (понад 40 мА). Додай резистор і заміни LED.</div>');
+    else if(c.t==='led'&&!c.dio&&I>0.025)w.push('<div class="hot">LED: '+fmt(I,'А')+' (норма до 20 мА)</div>');
+    if((c.t==='res'||c.t==='ldr')&&r.P>0.25)w.push('<div class="'+(r.P>1?'warn':'hot')+'">Резистор гріється: '+fmt(r.P,'Вт')+' (розрахований на 0,25 Вт)</div>');
+    if(c.t!=='wire'&&!c.hid&&HK(c.a)===HK(c.b))w.push('<div class="hot">'+NAMES[c.t]+' '+holeName(c.a)+': обидві ніжки в одному ряду, деталь закорочена</div>');
+    if(c.pin&&c.pin.startsWith('GPIO')&&I>0.04)w.push('<div class="warn">'+c.pin+': '+fmt(I,'А')+' (максимум 40 мА, пін може вигоріти)</div>');
+    if(c.pin==='3V3'&&I>0.5)w.push('<div class="warn">3V3: '+fmt(I,'А')+' (стабілізатор плати дає до ~0,5 А)</div>');
+    if(c.t==='src'&&!c.qq&&I>1)w.push('<div class="warn">Коротке замикання! Струм '+fmt(I,'А')+'</div>')}
+  for(const d of mods){if(d.t==='q'){const q=qInfo(d),I=q.ic??q.id??0;if(I>QP[d.k].imax)w.push('<div class="warn">'+QP[d.k].name+': струм '+fmt(I,'А')+', максимум '+fmt(QP[d.k].imax,'А')+'</div>');continue}const st=dhtState(d);if(st.bad)w.push('<div class="warn">DHT11: '+st.msg+'</div>')}
+  const Wn=document.getElementById('warns');Wn.className=w.length?'':'mut';Wn.innerHTML=[...new Set(w)].join('')||'Немає'}
+setInterval(()=>{if(!result)return;let ch=false;for(const c of comps)if(c.t==='led'&&!c.burnt){const I=Math.abs(result.res.get(c)?.I||0);
+  if(I>0.04){hot.set(c,(hot.get(c)||0)+1);if(hot.get(c)>=4){c.burnt=true;ch=true}}else hot.delete(c)}if(ch)recalc()},100);
+
+// ---- component drawing (local frame: origin = midpoint, x along a->b)
+const BANDS=['#111','#6b3f1d','#c8281f','#e8731a','#e5c718','#22a447','#2f6fe4','#8b5cf6','#8a8f98','#f4f4f4'];
+function bands(v){let e=Math.floor(Math.log10(v))-1,d=Math.round(v/Math.pow(10,e));if(d>=100){d=Math.round(d/10);e++}
+  const m=e>=0?BANDS[e]||'#f4f4f4':e===-1?'#c9a227':'#c0c0c0';return[BANDS[Math.floor(d/10)],BANDS[d%10],m,'#c9a227']}
+const leg=(x1,y1,x2,y2)=>`<line x1="${N(x1)}" y1="${N(y1)}" x2="${N(x2)}" y2="${N(y2)}" stroke="#7d838c" stroke-width="0.14" stroke-linecap="round"/><line x1="${N(x1)}" y1="${N(y1-0.03)}" x2="${N(x2)}" y2="${N(y2-0.03)}" stroke="#e8ebef" stroke-width="0.06" stroke-linecap="round"/>`;
+const pin=(x,y)=>`<circle cx="${N(x)}" cy="${N(y)}" r="0.13" fill="#59606b"/><circle cx="${N(x)}" cy="${N(y)}" r="0.06" fill="#dfe3e8"/>`;
+function compSVG(c,i){
+  const ax=hx(c.a[0]),ay=hy(c.a[1]),bx=hx(c.b[0]),by=hy(c.b[1]),len=Math.hypot(bx-ax,by-ay),ang=Math.atan2(by-ay,bx-ax)*180/Math.PI,mx=(ax+bx)/2,my=(ay+by)/2;
+  const r=result.res.get(c),o=[];
+  if(c===sel)o.push(`<line x1="${N(ax)}" y1="${N(ay)}" x2="${N(bx)}" y2="${N(by)}" stroke="var(--acc)" stroke-opacity=".45" stroke-width="1.3" stroke-linecap="round"/>`);
+  if(c.t==='wire'){const k=HK(c.a)+HK(c.b),[m,dk]=c.col&&WC[c.col]?WC[c.col]:/\+/.test(k)?WRED:/-/.test(k)?WBLK:WCOL[i%WCOL.length];
+    const lift=Math.min(1.6,len*0.25),nx=-(by-ay)/(len||1),ny=(bx-ax)/(len||1),s=ny>0?-1:1,cx=mx+nx*lift*s,cy=my+ny*lift*s,d=`M${N(ax)} ${N(ay)} Q${N(cx)} ${N(cy)} ${N(bx)} ${N(by)}`;
+    o.push(`<path d="${d}" transform="translate(0.05,0.1)" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="0.36" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${dk}" stroke-width="0.34" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${m}" stroke-width="0.26" stroke-linecap="round"/><path d="${d}" transform="translate(-0.05,-0.05)" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="0.06" stroke-linecap="round"/>`);
+    for(const[x,y]of[[ax,ay],[bx,by]])o.push(`<circle cx="${N(x)}" cy="${N(y)}" r="0.2" fill="${dk}"/><circle cx="${N(x)}" cy="${N(y)}" r="0.1" fill="#c9ced6"/>`);
+    return o.join('')}
+  const h=len/2,g=[];
+  if(c.t==='res'){const k=Math.min(1,(len-0.4)/2.6);g.push(leg(-h,0,h,0));
+    if(r&&r.P>0.25)g.push(`<circle r="${N(1.6*k+0.4)}" fill="url(#gHeat)" opacity="${Math.min(1,r.P)}"/>`);
+    g.push(`<g transform="scale(${N(Math.max(0.35,k))})"><g filter="url(#fShadowS)"><rect x="-0.75" y="-0.36" width="1.5" height="0.72" fill="url(#gRes)"/><ellipse cx="-0.75" rx="0.5" ry="0.5" fill="url(#gRes)"/><ellipse cx="0.75" rx="0.5" ry="0.5" fill="url(#gRes)"/></g>`+
+      bands(c.v).map((b,j)=>`<rect x="${N([-0.55,-0.27,0.01,0.58][j]-0.075)}" y="-0.36" width="0.15" height="0.72" fill="${b}"/>`).join('')+`<rect x="-1.2" y="-0.4" width="2.4" height="0.1" rx="0.05" fill="#fff" opacity=".3"/></g>`)}
+  if(c.t==='led'){const I=r?Math.abs(r.I):0,k=c.burnt?0:Math.min(1,Math.sqrt(I/0.012)),col=c.burnt?'white':c.v,s=Math.min(1,Math.max(0.55,(len+0.4)/2.4));g.push(leg(-h,0,h,0));
+    if(k>0.02)g.push(`<circle r="${N(2.4+1.6*k)}" fill="url(#gGlow_${c.v})" opacity="${N(k)}"/>`);
+    g.push(`<g transform="scale(${N(s)})"><g filter="url(#fShadowS)"><circle r="1.14" fill="${c.burnt?'#555':LEDG[c.v][2]}"/></g><circle r="0.98" fill="url(#gLed_${col})" stroke="${LEDG[col][2]}" stroke-width="0.04" ${c.burnt?'opacity=".55"':''}/>`+
+      `<rect x="-0.35" y="-0.45" width="0.12" height="0.9" fill="${LEDG[col][2]}" opacity=".5"/><rect x="0.1" y="-0.5" width="0.42" height="1.0" fill="${LEDG[col][2]}" opacity=".5"/><ellipse cx="-0.35" cy="-0.45" rx="0.3" ry="0.18" fill="#fff" opacity="${N(.55+.45*k)}" transform="rotate(-35 -0.35 -0.45)"/>`+
+      (c.burnt?`<path d="M-0.6 -0.6L0.6 0.6M0.6 -0.6L-0.6 0.6" stroke="#c0392b" stroke-width="0.18" stroke-linecap="round"/>`:'')+`</g>`)}
+  if(c.t==='btn'){g.push(leg(-h,0,h,0),`<g filter="url(#fShadowS)"><rect x="-1.15" y="-1.15" width="2.3" height="2.3" rx="0.22" fill="url(#gBtnBody)" stroke="#555b66" stroke-width="0.04"/></g><rect x="-0.95" y="-0.95" width="1.9" height="1.9" rx="0.16" fill="#1c1f25"/><circle r="${c.on?0.58:0.66}" fill="url(#gBtnTop)" stroke="#0e1014" stroke-width="0.04"/><ellipse cx="-0.2" cy="-0.25" rx="0.25" ry="0.14" fill="#fff" opacity="${c.on?.15:.35}" transform="rotate(-35 -0.2 -0.25)"/>`)}
+  if(c.t==='sw'){g.push(leg(-h,0,h,0),`<g filter="url(#fShadowS)"><rect x="-1.3" y="-0.55" width="2.6" height="1.1" rx="0.12" fill="#2f6fe4" stroke="#163f8c" stroke-width="0.05"/></g><rect x="-0.95" y="-0.28" width="1.9" height="0.56" rx="0.08" fill="#163f8c"/><rect x="${c.on?0.05:-0.9}" y="-0.24" width="0.85" height="0.48" rx="0.08" fill="#eef0f3"/>`)}
+  if(c.t==='ldr'){g.push(leg(-h,0,h,0),`<g filter="url(#fShadowS)"><circle r="0.75" fill="url(#gLdr)" stroke="#8a5a14" stroke-width="0.05"/></g><path d="M-0.45 -0.3H0.35V-0.1H-0.35V0.1H0.35V0.3H-0.45" fill="none" stroke="#8a3b12" stroke-width="0.09"/>`)}
+  if(c.t==='src'){g.push(leg(-h,0,h,0),`<g filter="url(#fShadowS)"><rect x="-1.6" y="-0.75" width="3.2" height="1.5" rx="0.15" fill="url(#gBat)"/></g><rect x="-1.6" y="-0.75" width="0.7" height="1.5" rx="0.1" fill="#c8281f"/>`)}
+  o.push(`<g transform="translate(${N(mx)},${N(my)}) rotate(${N(ang)})">${g.join('')}</g>`,pin(ax,ay),pin(bx,by));
+  if(c.t==='led')o.push(T(ax+(by===ay?0:0.55),ay-0.45,'+',0.7,'#c8281f',700));
+  if(c.t==='res'||c.t==='src'){const vert=Math.abs(by-ay)>Math.abs(bx-ax);o.push(T(vert?mx+0.95:mx,vert?my+0.2:my-0.75,c.t==='res'?fmt(c.v,'Ω').replace(' ',''):String(c.v).replace('.',',')+'V',0.55,'#3b3426',600,vert?'start':'middle'))}
+  return o.join('')}
+function render(){
+  L.comp.innerHTML=(esp?espSVG():'')+mods.map(d=>d.t==='q'?qSVG(d):dhtSVG(d)).join('')+comps.map(compSVG).join('');
+  const f=[];if(powered())for(const c of comps){const r=result.res.get(c);if(!r||c.burnt)continue;const I=r.I,a=Math.abs(I);if(a<1e-5)continue;
+    const sp=0.6*Math.log10(1+a*1e5),[p,q]=I>0?[c.a,c.b]:[c.b,c.a];
+    f.push(`<line class="flow" x1="${hx(p[0])}" y1="${hy(p[1])}" x2="${hx(q[0])}" y2="${hy(q[1])}" stroke="#2bd99a" stroke-width="0.2" stroke-dasharray="0 0.9" style="animation-duration:${N(0.9/sp)}s"/>`)}
+  L.flow.innerHTML=f.join('');renderTop();renderHover()}
+const PT=['res','led','sw','btn','ldr','src'],DSP={res:4,led:2,sw:3,btn:2,ldr:4,src:4};
+function dEnd(h){const n=DSP[tool],y=h[1];let x=h[0]+n;if(!isHole([x,y]))x=h[0]-n;return isHole([x,y])?[x,y]:null}
+const okPlace=cells=>{const u=used();return cells.every(p=>!u.has(p.join(',')))};
+const gw=(g,ok)=>`<g opacity="${ok?0.55:0.22}" pointer-events="none">${g}</g>`;
+function ghost(){if(!hover||['sel','del','probe'].includes(tool))return'';const h=hover;
+  if(drag)return(tool==='wire'||PT.includes(tool))&&String(drag.a)!==String(drag.b)?gw(compSVG({t:tool,a:drag.a,b:drag.b,v:DEF[tool],on:false},comps.length),!used().has(drag.b.join(','))):'';
+  if(tool==='wire')return`<circle cx="${hx(h[0])}" cy="${hy(h[1])}" r="0.35" fill="none" stroke="var(--acc)" stroke-width="0.12" pointer-events="none"/>`;
+  if(PT.includes(tool)){const b=dEnd(h);return b?gw(compSVG({t:tool,a:h,b,v:DEF[tool],on:false},0),okPlace([h,b])):''}
+  if(tool==='dht'||tool.startsWith('q:')){if(h[1] in RAIL)return'';const x=Math.min(h[0],COLS-2),d=tool==='dht'?{t:'dht',x,y:h[1],temp:23,hum:45}:{t:'q',k:tool.slice(2),x,y:h[1]};
+    return gw(d.t==='q'?qSVG(d):dhtSVG(d),okPlace(pinsOf(d).map(q=>q.p)))}
+  if((tool==='esp'||tool==='c3')&&!esp){const ty=tool==='c3'?'c3':'s3',bd=BOARDS[ty],nn=bd.top.length,c0=Math.min(Math.max(1,h[0]),COLS-nn+1),cells=[];
+    for(let x=c0;x<c0+nn;x++)for(let y=bd.rt;y<=bd.rb;y++)cells.push([x,y]);esp=newEsp(ty,c0);let g;try{g=espSVG()}finally{esp=null}return gw(g,okPlace(cells))}
+  return''}
+function renderTop(){const o=[ghost()];
+  for(const[x,t]of labels)o.push(`<g><rect x="${N(hx(x)-0.2)}" y="3.05" width="${N(t.length*0.38+0.6)}" height="1.0" rx="0.2" fill="#111827"/>`+T(hx(x)+0.1,3.77,t,0.62,'#fff',600,'start')+`</g>`);
+  if(drag&&!(tool==='wire'||PT.includes(tool)))o.push(`<line x1="${hx(drag.a[0])}" y1="${hy(drag.a[1])}" x2="${hx(drag.b[0])}" y2="${hy(drag.b[1])}" stroke="var(--acc)" stroke-width="0.18" stroke-dasharray="0.4 0.3" stroke-linecap="round"/>`);
+  probe.forEach((p,i)=>{if(!p)return;const x=hx(p[0]),y=hy(p[1]),c=i?'#1f2329':'#e5383b';
+    o.push(`<g filter="url(#fShadowS)" transform="translate(${x},${y}) rotate(35)"><path d="M0 0L-0.18 -0.7H0.18Z" fill="#c9ced6"/><rect x="-0.28" y="-3.2" width="0.56" height="2.5" rx="0.2" fill="${c}"/><rect x="-0.36" y="-1.0" width="0.72" height="0.25" rx="0.08" fill="${c}"/></g>`)});
+  L.top.innerHTML=o.join('')}
+function renderHover(){
+  if(!hover){L.hl.innerHTML='';L.tip.innerHTML='';return}
+  const k=HK(hover),o=[];for(let x=1;x<=COLS;x++)for(const y in YMAP){const p=[x,+y];if(isHole(p)&&HK(p)===k)o.push(`<rect x="${N(hx(x)-0.3)}" y="${N(hy(y)-0.3)}" width="0.6" height="0.6" rx="0.12" fill="none" stroke="#14b47a" stroke-width="0.12"/>`)}
+  L.hl.innerHTML=o.join('');
+  const v=result?.vn.get(k),ep=espAt(k);if(v===undefined||!powered()){L.tip.innerHTML='';return}
+  const t=(ep?ep.n+' · ':'')+v.toFixed(2).replace('.',',')+' В',w=t.length*0.42+0.6,x=Math.min(hx(hover[0])+0.5,W-w),y=Math.max(0.1,hy(hover[1])-1.6);
+  L.tip.innerHTML=`<rect x="${N(x)}" y="${N(y)}" width="${N(w)}" height="1" rx="0.18" fill="#111827"/>`+T(x+0.3,y+0.72,t,0.68,'#fff',600,'start')}
+exs.value='led';exs.onchange();
+</script>
