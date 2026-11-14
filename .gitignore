@@ -1,3 +1,16 @@
 .DS_Store
 node_modules/
 free-canvas.html
+
+# Усі приховані файли й папки (.claude, .githooks, .vscode, ...), крім самого .gitignore
+.*
+!.gitignore
+
+# Усе, що пов'язане з Claude
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json
+
+# Журнал розробника (лише локально)
+developer-log/

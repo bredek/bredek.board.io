@@ -70,6 +70,42 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .fixb{margin-top:8px;font:13px var(--fb);padding:7px 10px;border-radius:7px;border:1px solid var(--warn);background:transparent;color:var(--warn);cursor:pointer}
 .esp{display:grid;grid-template-columns:auto minmax(0,290px) auto auto auto;justify-content:start;gap:4px 12px;align-items:center;font-variant-numeric:tabular-nums}.esp .num{font-family:var(--fm)}
 input[type=number],select.v{width:100%;font:13px var(--fm);padding:4px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:4px;box-sizing:border-box}
+/* Explain mode */
+#expc{grid-column:1/-1}
+.ex-t{font:600 18px var(--fd);margin:2px 0 6px}
+.ex-p{margin:0 0 10px;line-height:1.55;font-size:14px;max-width:84ch}
+.ex-b{border:1px solid var(--line);border-radius:8px;margin:6px 0;background:var(--bg)}
+.ex-b>summary{cursor:pointer;padding:9px 10px;font:600 14px var(--fb);display:flex;gap:10px;align-items:center;list-style:none}
+.ex-b>summary::-webkit-details-marker{display:none}
+.ex-b>summary::after{content:"▾";margin-left:auto;color:var(--mut)}
+.ex-b[open]>summary::after{content:"▴"}
+.ex-b[open]>summary{border-bottom:1px solid var(--line)}
+.ex-b>summary:focus-visible,.ex-btn:focus-visible,.ex-list button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ex-n{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--acc);color:var(--bg);font:700 12px var(--fm)}
+.ex-bd{padding:8px 12px 10px;font-size:13.5px;line-height:1.55}
+.ex-bd p{margin:0 0 8px;max-width:84ch}
+.ex-bd code{font:12px var(--fm);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.ex-tw{overflow-x:auto;margin:8px 0}
+.ex-calc{border-collapse:collapse;width:100%;min-width:560px;font-size:12.5px}
+.ex-calc th{font:600 11px var(--fb);text-transform:uppercase;letter-spacing:.05em;color:var(--mut);text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}
+.ex-calc td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.ex-calc td.f{font-family:var(--fm)}.ex-calc td.sim{color:var(--acc);font-weight:600}
+.ex-note{font-size:12.5px;color:var(--mut);background:var(--panel);border-left:3px solid var(--acc);padding:6px 10px;border-radius:0 6px 6px 0;margin:6px 0;max-width:84ch}
+.ex-refs{font-size:12.5px;margin-top:6px;color:var(--mut)}.ex-refs a,.ex-lit a{color:var(--acc)}
+.ex-h{font:600 13px var(--fd);margin:14px 0 4px}
+.ex-lit{margin:0;padding-left:18px;font-size:13px;line-height:1.6}
+.ex-list,.ex-wi{display:flex;flex-wrap:wrap;gap:6px}
+.ex-list button,.ex-wi button,.ex-btn{font:13px var(--fb);padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.ex-list button:hover,.ex-wi button:hover,.ex-btn:hover{border-color:var(--acc)}
+.ex-btn{margin-left:8px}
+@media (max-width:640px){
+ .ex-calc{min-width:0}.ex-calc thead{display:none}
+ .ex-calc,.ex-calc tbody,.ex-calc tr,.ex-calc td{display:block}
+ .ex-calc tr{border:1px solid var(--line);border-radius:8px;margin:0 0 8px;padding:6px 10px;background:var(--panel)}
+ .ex-calc td{border:0;padding:2px 0;word-break:break-word}
+ .ex-calc td:first-child{font:600 13px var(--fb);padding-bottom:4px}
+ .ex-calc td[data-l]:not([data-l=""])::before{content:attr(data-l)": ";color:var(--mut);font:600 10.5px var(--fb);text-transform:uppercase;letter-spacing:.04em;display:block}
+}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@600&family=JetBrains+Mono:wght@500;600&display=swap">
 
@@ -84,12 +120,15 @@ input[type=number],select.v{width:100%;font:13px var(--fm);padding:4px;border:1p
 </div>
 <div class="wrap"><svg id="sv" viewBox="-0.05 -0.05 65.6 22.75" xmlns="http://www.w3.org/2000/svg"><defs id="defs"></defs><g id="Lboard"></g><g id="Lhl"></g><g id="Lcomp"></g><g id="Lflow"></g><g id="Ltop"></g><g id="Ltip"></g></svg></div>
 <div class="cards">
+ <div class="card" id="expc" hidden aria-live="polite"></div>
  <div class="card"><h2>Мультиметр (V між щупами)</h2><div class="dmm" id="dmm">— — —</div><div class="mut">Інструмент «Щупи»: клацни отвір для червоного щупа, потім для чорного.</div></div>
  <div class="card"><h2>Вибраний елемент</h2><div id="sel" class="mut">Нічого не вибрано.</div></div>
  <div class="card" id="espc" hidden style="grid-column:1/-1"><div class="esp-t"><h2 id="esph">Піни плати</h2><span id="esps" class="mut"></span></div><div id="espb"></div></div>
  <div class="card"><h2>Попередження</h2><div id="warns" class="mut">Немає</div></div>
  <div class="card mut"><h2>Як з'єднана макетка</h2><div id="hov">Наведи на отвір: підсвітяться всі отвори, з'єднані з ним. a–e одного стовпця з'єднані між собою, f–j теж, а через канавку посередині ні. Шини + і − тягнуться вздовж усієї плати. Верхні й нижні шини живить модуль живлення (як MB102 з обома перемичками). Деталь ставиш кліком (стандартна довжина) або перетягуванням від отвору до отвору, в один отвір лише одна ніжка. Esc повертає до інструмента «Вибір».</div></div>
 </div>
+<script src="literature.js"></script>
+<script src="lessons.js"></script>
 <script>
 // ===== SOLVER (pure) =====
 const LEDC={red:[1.8,'#ff3b30','червоний'],yellow:[1.9,'#ffcc00','жовтий'],green:[2.8,'#34c759','зелений'],blue:[2.9,'#3a8bff','синій'],white:[2.9,'#f4f4ff','білий']};
@@ -339,14 +378,83 @@ const EX={
  err:{n:'Помилка: резистор в одному стовпці',v:5,c:[['wire',[10,0],[10,3]],['res',[10,5],[10,7],220],['led',[10,9],[12,9],'red'],['wire',[12,13],[12,15]]],p:[[10,10],[12,15]],l:[[10,'резистор закорочено стовпцем, LED без живлення']]}};
 const exs=document.getElementById('ex');
 for(const k in EX){const o=document.createElement('option');o.value=k;o.textContent=EX[k].n;exs.appendChild(o)}
-exs.onchange=()=>{const e=EX[exs.value];if(!e)return;esp=e.esp?newEsp(e.esp.type||'s3',e.esp.c0,{...e.esp.modes},{...(e.esp.src||{})}):null;mods=(e.m||[]).map(d=>d.t==='q'?{t:'q',k:d.k,x:d.x,y:d.y}:{t:'dht',x:d.x,y:d.y,temp:23,hum:45});comps=e.c.map(([t,a,b,v])=>({t,a,b,v:v??DEF[t],on:false}));labels=e.l||[];probe=e.p.map(p=>p.slice());if(e.v)pv.value=String(e.v);pwr.checked=!!e.v;sel=null;hot.clear();exs.value='';recalc()};
-document.getElementById('clr').onclick=()=>{comps=[];esp=null;mods=[];labels=[];probe=[null,null];sel=null;recalc()};
+exs.onchange=()=>{const id=exs.value,e=EX[id];if(!e)return;esp=e.esp?newEsp(e.esp.type||'s3',e.esp.c0,{...e.esp.modes},{...(e.esp.src||{})}):null;mods=(e.m||[]).map(d=>d.t==='q'?{t:'q',k:d.k,x:d.x,y:d.y}:{t:'dht',x:d.x,y:d.y,temp:23,hum:45});comps=e.c.map(([t,a,b,v])=>({t,a,b,v:v??DEF[t],on:false}));labels=e.l||[];probe=e.p.map(p=>p.slice());if(e.v)pv.value=String(e.v);pwr.checked=!!e.v;sel=null;hot.clear();curEx=id;exSig=exSigNow();exOpen=new Set([0]);exAct=0;exs.value='';recalc()};
+document.getElementById('clr').onclick=()=>{comps=[];esp=null;mods=[];labels=[];probe=[null,null];sel=null;curEx=null;exAct=null;recalc()};
 pwr.onchange=pv.onchange=()=>recalc();
 const luxIn=document.getElementById('lux');
 luxIn.oninput=()=>{lux=Math.round(Math.pow(10,+luxIn.value)-1);document.getElementById('luxv').textContent=lux;recalc()};
 
 const powered=()=>pwr.checked||!!esp;
-function recalc(){for(let it=0;it<60;it++){all=[...espComps(),...POWER(),...modComps(),...comps];result=solve(all,lux,HK);const c1=esp?progStep():false,c2=trStep();if(!c1&&!c2)break}if(esp)saveLv();panel();render()}
+// ===== EXPLAIN MODE: пояснення схеми (уроки в lessons.js, література в literature.js) =====
+let explainOn=false,curEx=null,exSig='',exOpen=new Set(),exAct=null,exLast='';
+const exSigNow=()=>JSON.stringify([comps.map(c=>[c.t,c.a,c.b,c.v]),mods.map(d=>[d.t,d.k,d.x,d.y]),esp?[esp.type,esp.c0,esp.modes,esp.src]:null]);
+const exModified=()=>curEx!=null&&exSig!==exSigNow();
+function exCtx(){
+  const zero={V:0,I:0,P:0},q=mods.find(d=>d.t==='q'),dh=mods.find(d=>d.t==='dht'),dst=dh?dhtState(dh):null;
+  return{
+    r:i=>(comps[i]&&result.res.get(comps[i]))||zero,v:i=>comps[i]?comps[i].v:0,c:i=>comps[i]||{},
+    vf:i=>comps[i]?(comps[i].vf??LEDC[comps[i].v][0]):1.8,
+    Vs:+pv.value,fmt,ldrR,LED_RS,RINT,ROUT:30,RBE:20,RSAT:1,R5V:0.2,
+    V:p=>VN(p),btn:()=>!!comps.find(c=>c.t==='btn'&&c.on),
+    q:q?{...qInfo(q),beta:QP[q.k].beta}:null,
+    dht:dh?{u:dst.u,ok:!!dst.ok,temp:dh.temp,hum:dh.hum}:null,
+    mode:n=>esp?(esp.modes[n]||'in'):'in',
+    pinV:n=>{const p=esp&&espPins().find(z=>z.n===String(n));return p?VN(p.p):0},
+    gpio:n=>{const s=all.find(c=>c.pin==='GPIO'+n);return(s&&result.res.get(s))||zero},
+    v3:all.filter(c=>c.pin==='3V3').reduce((a,c)=>a+Math.abs(result.res.get(c).I),0)}}
+function exCalc(rows){
+  let h='',open=false;
+  for(const r of rows){
+    if(r.note){if(open){h+='</tbody></table></div>';open=false}h+='<div class="ex-note">'+r.note+'</div>';continue}
+    if(!open){h+='<div class="ex-tw"><table class="ex-calc"><thead><tr><th>Що рахуємо</th><th>Формула</th><th>За формулою</th><th>У симуляторі</th></tr></thead><tbody>';open=true}
+    h+='<tr><td data-l="">'+r.what+'</td><td class="f" data-l="Формула">'+r.f+'</td><td class="f" data-l="За формулою">'+(r.ideal??'—')+'</td><td class="f sim" data-l="У симуляторі">'+(r.sim??'—')+'</td></tr>'}
+  if(open)h+='</tbody></table></div>';return h}
+const exLink=k=>LIT[k]?'<a href="'+LIT[k].url+'" target="_blank" rel="noopener">'+LIT[k].short+'</a>':'';
+function exHTML(){
+  const head='<h2>Пояснення схеми</h2>';
+  if(curEx==null||!LESSONS[curEx])
+    return head+'<div class="mut" style="margin-bottom:8px">Відкрий приклад, і тут з’явиться пояснення: навіщо схема зібрана, як у ній іде струм, розрахунки за законом Ома та література.</div><div class="ex-list">'+Object.keys(EX).map(k=>'<button data-ex="'+k+'">'+EX[k].n+'</button>').join('')+'</div>';
+  const Ls=LESSONS[curEx],x=exCtx();
+  let h=head+'<div class="ex-t">'+Ls.title+'</div>';
+  if(exModified())h+='<div class="note">Схему змінено. Пояснення написане для оригінального прикладу, тому розрахунки й підсвітка можуть не збігатися. <button class="ex-btn" data-reset="1">Повернути приклад</button></div>';
+  if(!powered())h+='<div class="note">Живлення вимкнено: у колонці «У симуляторі» будуть нулі. Увімкни «Живлення шин».</div>';
+  h+='<p class="ex-p">'+Ls.purpose+'</p>';
+  Ls.blocks.forEach((b,i)=>{
+    let rows='';try{rows=exCalc(b.calc?b.calc(x):[])}catch(e){rows='<div class="ex-note">Розрахунок недоступний для зміненої схеми.</div>'}
+    const refs=(b.refs||[]).map(exLink).filter(Boolean).join(' · ');
+    h+='<details class="ex-b" data-i="'+i+'"'+(exOpen.has(i)?' open':'')+'><summary><span class="ex-n">'+(i+1)+'</span>'+b.title+'</summary><div class="ex-bd"><p>'+b.what+'</p>'+(b.path?'<p><b>Шлях струму:</b> '+b.path+'</p>':'')+rows+(refs?'<div class="ex-refs">Читати далі: '+refs+'</div>':'')+'</div></details>'});
+  if((Ls.whatIf||[]).length)h+='<h3 class="ex-h">А що, якщо…</h3><div class="ex-wi">'+Ls.whatIf.map(([k,t])=>EX[k]?'<button data-ex="'+k+'">'+t+'</button>':'').join('')+'</div>';
+  const ks=[...new Set(Ls.blocks.flatMap(b=>b.refs||[]))].filter(k=>LIT[k]);
+  if(ks.length)h+='<h3 class="ex-h">Література до цього уроку</h3><ul class="ex-lit">'+ks.map(k=>{const l=LIT[k];return'<li><a href="'+l.url+'" target="_blank" rel="noopener">'+l.title+'</a> <span class="mut">'+l.src+' · '+l.kind+' · '+l.lang.toUpperCase()+'</span></li>'}).join('')+'</ul>';
+  return h+'<div class="hint">Симулятор наближений: числа в колонці «У симуляторі» це результат моделі, а не вимірювання на реальній схемі.</div>'}
+function explainPanel(){
+  const E=document.getElementById('expc');E.hidden=!explainOn;if(!explainOn)return;
+  let h;try{h=exHTML()}catch(e){console.error('explain:',e);h='<h2>Пояснення схеми</h2><div class="mut">Не вдалося побудувати пояснення для цієї схеми.</div>'}
+  if(h!==exLast){E.innerHTML=h;exLast=h}}
+function exHlSVG(){
+  if(!explainOn||curEx==null||exAct==null||exModified())return'';
+  const b=LESSONS[curEx]?.blocks[exAct];if(!b)return'';const o=[];
+  const box=(x0,y0,x1,y1)=>`<rect x="${N(x0)}" y="${N(y0)}" width="${N(x1-x0)}" height="${N(y1-y0)}" rx="0.4" fill="var(--acc)" fill-opacity=".16" stroke="var(--acc)" stroke-width="0.2" stroke-dasharray="0.5 0.35"/>`;
+  for(const t of b.hl||[]){
+    if(typeof t==='number'){const c=comps[t];if(!c)continue;const ax=N(hx(c.a[0])),ay=N(hy(c.a[1])),bx=N(hx(c.b[0])),by=N(hy(c.b[1]));
+      o.push(c.t==='wire'?`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="var(--acc)" stroke-opacity=".6" stroke-width="0.3" stroke-linecap="round" stroke-dasharray="0.5 0.4"/><circle cx="${ax}" cy="${ay}" r="0.65" fill="var(--acc)" fill-opacity=".3"/><circle cx="${bx}" cy="${by}" r="0.65" fill="var(--acc)" fill-opacity=".3"/>`
+        :`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="var(--acc)" stroke-opacity=".3" stroke-width="1.5" stroke-linecap="round"/>`)}
+    else if(t==='q'){const d=mods.find(d=>d.t==='q');if(d){const{x0,x1,y0}=qBox(d);o.push(box(x0-0.3,y0-0.3,x1+0.3,hy(d.y)+1))}}
+    else if(t==='dht'){const d=mods.find(d=>d.t==='dht');if(d){const{x0,x1,y0}=dhtBox(d);o.push(box(x0-0.3,y0-0.3,x1+0.3,hy(d.y)+1))}}
+    else if(t==='esp'&&esp){const e=espBox();o.push(box(e.x0-0.2,e.y0-0.2,e.x1+0.2,e.y1+0.2))}}
+  return'<g pointer-events="none">'+o.join('')+'</g>'}
+document.getElementById('expc').addEventListener('click',e=>{
+  const s=e.target.closest('summary');
+  if(s){const d=s.parentElement,i=+d.dataset.i;
+    if(d.open){exOpen.delete(i);if(exAct===i)exAct=[...exOpen].pop()??null}else{exOpen.add(i);exAct=i}
+    renderTop();return}
+  const b=e.target.closest('[data-ex]');if(b){exs.value=b.dataset.ex;exs.onchange();return}
+  if(e.target.closest('[data-reset]')&&curEx){exs.value=curEx;exs.onchange()}});
+{const xb=document.createElement('button');xb.className='tl';xb.id='t_explain';xb.title='Пояснення схеми: навіщо вона зібрана, як іде струм, розрахунки й література';xb.setAttribute('aria-pressed','false');
+  xb.innerHTML='<svg viewBox="-2.1 -1.6 4.2 3.2" aria-hidden="true"><circle cx="0" cy="-0.3" r="0.95" fill="#ffd43b" stroke="#b58900" stroke-width="0.1"/><path d="M-0.3 -0.2L0 0.3L0.3 -0.2" fill="none" stroke="#b58900" stroke-width="0.1" stroke-linecap="round" stroke-linejoin="round"/><rect x="-0.45" y="0.62" width="0.9" height="0.3" rx="0.08" fill="#9aa0a6"/><rect x="-0.3" y="0.96" width="0.6" height="0.24" rx="0.08" fill="#6b717b"/></svg><span>Пояснити</span>';
+  xb.onclick=()=>{explainOn=!explainOn;xb.classList.toggle('on',explainOn);xb.setAttribute('aria-pressed',String(explainOn));exLast='';explainPanel();renderTop();if(explainOn)document.getElementById('expc').scrollIntoView({behavior:'smooth',block:'nearest'})};
+  const sp=document.createElement('span');sp.className='sep';tb.append(sp,xb)}
+function recalc(){for(let it=0;it<60;it++){all=[...espComps(),...POWER(),...modComps(),...comps];result=solve(all,lux,HK);const c1=esp?progStep():false,c2=trStep();if(!c1&&!c2)break}if(esp)saveLv();panel();render();explainPanel()}
 const used=()=>{const s=new Set();if(esp)for(let x=esp.c0;x<esp.c0+B().top.length;x++)for(let y=B().rt;y<=B().rb;y++)s.add(x+','+y);for(const d of mods)for(const q of pinsOf(d))s.add(q.p.join(','));for(const c of comps)for(const p of[c.a,c.b])s.add(p.join(','));return s};
 function pt(ev){const q=sv.createSVGPoint();q.x=ev.clientX;q.y=ev.clientY;const{x,y}=q.matrixTransform(sv.getScreenCTM().inverse());
   let best=null,bd=0.6;for(let gx=1;gx<=COLS;gx++)for(const gy in YMAP){const p=[gx,+gy];if(!isHole(p))continue;const d=Math.hypot(hx(gx)-x,hy(gy)-y);if(d<bd){bd=d;best=p}}return{x,y,g:best}}
@@ -507,7 +615,7 @@ function ghost(){if(!hover||['sel','del','probe'].includes(tool))return'';const 
   if((tool==='esp'||tool==='c3')&&!esp){const ty=tool==='c3'?'c3':'s3',bd=BOARDS[ty],nn=bd.top.length,c0=Math.min(Math.max(1,h[0]),COLS-nn+1),cells=[];
     for(let x=c0;x<c0+nn;x++)for(let y=bd.rt;y<=bd.rb;y++)cells.push([x,y]);esp=newEsp(ty,c0);let g;try{g=espSVG()}finally{esp=null}return gw(g,okPlace(cells))}
   return''}
-function renderTop(){const o=[ghost()];
+function renderTop(){const o=[exHlSVG(),ghost()];
   for(const[x,t]of labels)o.push(`<g><rect x="${N(hx(x)-0.2)}" y="3.05" width="${N(t.length*0.38+0.6)}" height="1.0" rx="0.2" fill="#111827"/>`+T(hx(x)+0.1,3.77,t,0.62,'#fff',600,'start')+`</g>`);
   if(drag&&!(tool==='wire'||PT.includes(tool)))o.push(`<line x1="${hx(drag.a[0])}" y1="${hy(drag.a[1])}" x2="${hx(drag.b[0])}" y2="${hy(drag.b[1])}" stroke="var(--acc)" stroke-width="0.18" stroke-dasharray="0.4 0.3" stroke-linecap="round"/>`);
   probe.forEach((p,i)=>{if(!p)return;const x=hx(p[0]),y=hy(p[1]),c=i?'#1f2329':'#e5383b';
